@@ -4,6 +4,7 @@
 // extract from chromium source code by @liuwayong
 (function () {
     'use strict';
+    console.log("hello...");
     /**
      * T-Rex runner.
      * @param {string} outerContainerId Outer containing element id.
