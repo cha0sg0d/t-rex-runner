@@ -79,7 +79,7 @@ class Dino {
         
         // Keep dino within canvas bounds
         if (this.x < 0) this.x = 0;
-        if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+        // if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
 
         if (this.isJumping) {
             this.velocityY += this.gravity;
@@ -151,9 +151,22 @@ class Dino {
 class Horizon {
     constructor(canvas) {
         this.canvas = canvas;
-        this.chunkWidth = Math.floor(canvas.width * 3/4); // Each chunk is 2/3 of canvas width
+        this.chunkWidth = Math.floor(canvas.width * 3/4);
         console.log(`Chunk width: ${this.chunkWidth} ${canvas.width}`);
-        this.currentChunk = 0; // Track which chunk the dino is in
+        this.currentChunk = 0;
+
+        // Ground properties
+        this.groundSourceWidth = 600;     // Width of one ground segment in sprite
+        this.groundSourceHeight = 12;
+        this.groundY = canvas.height - 24;
+        
+        // Define the two possible ground types
+        this.groundTypes = {
+            FLAT: spriteDefinition.HORIZON.x,
+            BUMPY: spriteDefinition.HORIZON.x + this.groundSourceWidth
+        };
+        
+        this.bumpThreshold = 0.5; // 50% chance of bumpy ground
         
         // Initialize first few chunks
         this.chunks = [
@@ -161,23 +174,25 @@ class Horizon {
             this.generateChunk(1),
             this.generateChunk(2)
         ];
+    }
 
-        // Ground properties remain the same
-        this.groundY = canvas.height - 24;
-        this.groundSourceWidth = this.chunkWidth;
-        this.groundSourceHeight = 12;
-        this.groundSourceX = spriteDefinition.HORIZON.x;
-        this.groundSourceY = spriteDefinition.HORIZON.y;
+    getRandomGroundType() {
+        // Returns either flat or bumpy ground x-position
+        return Math.random() > this.bumpThreshold ? 
+            this.groundTypes.BUMPY : 
+            this.groundTypes.FLAT;
     }
 
     generateChunk(chunkIndex) {
-        // Generate a new chunk with random cloud positions
+        console.log(`Generating chunk ${chunkIndex}`);
         const chunk = {
             startX: chunkIndex * this.chunkWidth,
-            clouds: []
+            clouds: [],
+            // Randomly choose ground type for this chunk
+            groundSourceX: this.getRandomGroundType()
         };
 
-        // Add 1-2 clouds per chunk with random positions
+        // Add clouds
         const numClouds = 1 + Math.floor(Math.random() * 2);
         for (let i = 0; i < numClouds; i++) {
             chunk.clouds.push({
@@ -187,60 +202,52 @@ class Horizon {
                 sourceY: spriteDefinition.CLOUD.y
             });
         }
+
         return chunk;
     }
 
-    updateChunks(dinoX) {
-        // Determine which chunk the dino is in
-        const newChunk = Math.floor(dinoX / this.chunkWidth);
-        
-        if (newChunk !== this.currentChunk) {
-            // Remove chunks that are too far behind
-            this.chunks = this.chunks.filter(chunk => 
-                chunk.startX >= (newChunk - 1) * this.chunkWidth
-            );
-
-            // Generate new chunks ahead
-            while (this.chunks.length < 3) {
-                const nextChunkIndex = Math.floor(this.chunks[this.chunks.length - 1].startX / this.chunkWidth) + 1;
-                this.chunks.push(this.generateChunk(nextChunkIndex));
-            }
-
-            this.currentChunk = newChunk;
-        }
-    }
-
     draw(ctx, spriteSheet, dinoX, dinoY) {
-        // Draw which chunk the dino is in above the dino
-        ctx.fillText(`Chunk: ${this.currentChunk}`, dinoX, dinoY - 20);
-        ctx.fillText(`Dino X: ${dinoX}`, dinoX, dinoY - 40);
-
-        // Draw the ground (unchanged)
-        let groundX = 0;
-        while (groundX < this.canvas.width) {
+        // Draw chunks
+        this.chunks.forEach(chunk => {
+            // Draw ground segment for this chunk
             ctx.drawImage(
                 spriteSheet,
-                this.groundSourceX,
-                this.groundSourceY,
-                this.groundSourceWidth,
-                this.groundSourceHeight,
-                groundX,
-                this.groundY,
-                this.groundSourceWidth,
-                this.groundSourceHeight
+                chunk.groundSourceX,           // Source X (flat or bumpy)
+                spriteDefinition.HORIZON.y,    // Source y
+                this.groundSourceWidth,        // Source width
+                this.groundSourceHeight,       // Source height
+                chunk.startX,                  // Destination x
+                this.groundY,                  // Destination y
+                this.chunkWidth,              // Scale to chunk width
+                this.groundSourceHeight        // Destination height
             );
-            groundX += this.groundSourceWidth;
-        }
 
-        // Draw clouds from active chunks
-        this.chunks.forEach(chunk => {
+            // Debug visualization
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+                chunk.startX,
+                0,
+                this.chunkWidth,
+                this.canvas.height
+            );
+            
+            ctx.fillStyle = 'red';
+            ctx.font = '20px Arial';
+            ctx.fillText(
+                `Chunk ${Math.floor(chunk.startX / this.chunkWidth)}`,
+                chunk.startX + 10,
+                30
+            );
+
+            // Draw clouds
             chunk.clouds.forEach(cloud => {
                 ctx.drawImage(
                     spriteSheet,
                     cloud.sourceX,
                     cloud.sourceY,
-                    46, // cloudWidth
-                    14, // cloudHeight
+                    46,
+                    14,
                     cloud.x,
                     cloud.y,
                     46,
@@ -248,6 +255,36 @@ class Horizon {
                 );
             });
         });
+
+        // Debug info
+        ctx.fillStyle = 'black';
+        ctx.fillText(`Chunk: ${this.currentChunk}`, dinoX, dinoY - 20);
+        ctx.fillText(`Dino X: ${dinoX}`, dinoX, dinoY - 40);
+    }
+
+    updateChunks(dinoX) {
+        // Calculate which chunk the dino is in
+        const currentChunkIndex = Math.floor(dinoX / this.chunkWidth);
+        
+        // If we've moved to a new chunk
+        if (currentChunkIndex !== this.currentChunk) {
+            this.currentChunk = currentChunkIndex;
+            
+            // Remove chunks that are too far behind
+            this.chunks = this.chunks.filter(chunk => {
+                const chunkIndex = Math.floor(chunk.startX / this.chunkWidth);
+                if(chunkIndex < currentChunkIndex - 1) {
+                    console.log(`Removing chunk ${chunkIndex}`);
+                }
+                return chunkIndex >= currentChunkIndex - 1;
+            });
+            
+            // Add new chunks ahead
+            while (this.chunks.length < 3) {
+                const nextChunkIndex = Math.floor(this.chunks[this.chunks.length - 1].startX / this.chunkWidth) + 1;
+                this.chunks.push(this.generateChunk(nextChunkIndex));
+            }
+        }
     }
 }
 
@@ -280,7 +317,7 @@ class Game {
                     this.dino.setDirection('right');
                     break;
                 case 'KeyF':  // Add debug key
-                    console.log(`Dino position - X: ${this.dino.x}, Y: ${this.dino.y}`);
+                    this.logDebugInfo();
                     break;
             }
         });
@@ -295,19 +332,49 @@ class Game {
 
         this.horizon = new Horizon(this.canvas);
         
+        // Add camera properties
+        this.cameraOffset = 0;
+        this.CAMERA_FOLLOW_SPEED = 0.1; // Adjust for smoother/faster camera
+        
         // Start the game loop
         this.gameLoop();
     }
 
+    logDebugInfo() {
+        console.log(`Dino position - X: ${this.dino.x}, Y: ${this.dino.y}`);
+        // Active Chunk
+        console.log(`Active Chunk: ${this.horizon.currentChunk}`, this.horizon.chunks.find(chunk => chunk.startX === this.horizon.currentChunk * this.horizon.chunkWidth));
+    }
+
+    updateCamera() {
+        // Calculate desired camera position (center dino)
+        const desiredCameraX = this.dino.x - (this.canvas.width / 2);
+        
+        // Smooth camera movement
+        this.cameraOffset += (desiredCameraX - this.cameraOffset);
+    }
+
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Save the canvas state
+        this.ctx.save();
+        
+        // Apply camera transform to everything
+        this.ctx.translate(-this.cameraOffset, 0);
+        
+        // Draw everything in world space
         this.horizon.draw(this.ctx, this.spriteSheet, this.dino.x, this.dino.y);
         this.dino.draw(this.ctx, this.spriteSheet);
+        
+        // Restore canvas state
+        this.ctx.restore();
     }
     
     gameLoop() {
         this.dino.update(this.canvas);
-        this.horizon.updateChunks(this.dino.x);
+        this.horizon.updateChunks(this.dino.x); // Still uses absolute position
+        this.updateCamera();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
     }
