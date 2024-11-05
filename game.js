@@ -35,6 +35,11 @@ class Dino {
         this.FRAME_CHANGE_SPEED = 5; // Adjust this to change animation speed
         this.facingLeft = false; // Add this property to control direction
         this.direction = 'right'; // Add this to track current direction
+        
+        // Add movement properties
+        this.velocityX = 0;
+        this.speed = 5;        // Horizontal movement speed
+        this.isMoving = false; // Track if dino is moving
     }
 
     setDirection(newDirection) {
@@ -42,6 +47,20 @@ class Dino {
             this.direction = newDirection;
             this.facingLeft = (newDirection === 'left');
         }
+        
+        // Set horizontal velocity based on direction
+        if (newDirection === 'left') {
+            this.velocityX = -this.speed;
+            this.isMoving = true;
+        } else if (newDirection === 'right') {
+            this.velocityX = this.speed;
+            this.isMoving = true;
+        }
+    }
+
+    stopMoving() {
+        this.velocityX = 0;
+        this.isMoving = false;
     }
 
     jump() {
@@ -55,6 +74,13 @@ class Dino {
     }
 
     update(canvas) {
+        // Add horizontal movement
+        this.x += this.velocityX;
+        
+        // Keep dino within canvas bounds
+        if (this.x < 0) this.x = 0;
+        if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+
         if (this.isJumping) {
             this.velocityY += this.gravity;
             this.y += this.velocityY;
@@ -66,13 +92,19 @@ class Dino {
                 this.isJumping = false;
             }
         } else {
-            // Animate running
-            this.frameCount++;
-            if (this.frameCount >= this.FRAME_CHANGE_SPEED) {
-                this.currentFrame = (this.currentFrame + 1) % this.runningFrames.length;
-                this.sourceX = this.runningFrames[this.currentFrame].x;
-                this.sourceY = this.runningFrames[this.currentFrame].y;
-                this.frameCount = 0;
+            // Only animate if moving horizontally
+            if (this.isMoving) {
+                this.frameCount++;
+                if (this.frameCount >= this.FRAME_CHANGE_SPEED) {
+                    this.currentFrame = (this.currentFrame + 1) % this.runningFrames.length;
+                    this.sourceX = this.runningFrames[this.currentFrame].x;
+                    this.sourceY = this.runningFrames[this.currentFrame].y;
+                    this.frameCount = 0;
+                }
+            } else {
+                // Reset to standing frame when not moving
+                this.sourceX = this.runningFrames[0].x;
+                this.sourceY = this.runningFrames[0].y;
             }
         }
     }
@@ -203,7 +235,7 @@ class Game {
         this.spriteSheet = new Image();
         this.spriteSheet.src = 'assets/default_100_percent/100-offline-sprite.png';
         
-        // Update event listener
+        // Update event listeners
         document.addEventListener('keydown', (event) => {
             switch(event.code) {
                 case 'Space':
@@ -217,7 +249,15 @@ class Game {
                     break;
             }
         });
-        
+
+        // Add keyup listener to stop movement when keys are released
+        document.addEventListener('keyup', (event) => {
+            if (event.code === 'ArrowLeft' && this.dino.direction === 'left' ||
+                event.code === 'ArrowRight' && this.dino.direction === 'right') {
+                this.dino.stopMoving();
+            }
+        });
+
         this.horizon = new Horizon(this.canvas);
         
         // Start the game loop
