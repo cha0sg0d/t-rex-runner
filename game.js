@@ -77,10 +77,6 @@ class Dino {
         // Add horizontal movement
         this.x += this.velocityX;
         
-        // Keep dino within canvas bounds
-        if (this.x < 0) this.x = 0;
-        // if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
-
         if (this.isJumping) {
             this.velocityY += this.gravity;
             this.y += this.velocityY;
@@ -168,17 +164,26 @@ class Horizon {
         
         this.bumpThreshold = 0.5; // 50% chance of bumpy ground
         
-        // Initialize first few chunks
-        this.chunks = [
-            this.generateChunk(0),
-            this.generateChunk(1),
-            this.generateChunk(2)
-        ];
+        // Add seed for random generation
+        this.seed = 12345; // You can set this to any number
+        
+        // Initialize chunks map instead of array
+        this.chunks = new Map();
+        
+        // Generate initial chunks
+        this.generateInitialChunks();
     }
 
-    getRandomGroundType() {
-        // Returns either flat or bumpy ground x-position
-        return Math.random() > this.bumpThreshold ? 
+    // Add seeded random function
+    seededRandom(chunkIndex) {
+        // Simple seeded random function
+        const x = Math.sin(this.seed + chunkIndex) * 10000;
+        return x - Math.floor(x);
+    }
+
+    getRandomGroundType(chunkIndex) {
+        // Use seeded random instead of Math.random
+        return this.seededRandom(chunkIndex) > this.bumpThreshold ? 
             this.groundTypes.BUMPY : 
             this.groundTypes.FLAT;
     }
@@ -188,16 +193,15 @@ class Horizon {
         const chunk = {
             startX: chunkIndex * this.chunkWidth,
             clouds: [],
-            // Randomly choose ground type for this chunk
-            groundSourceX: this.getRandomGroundType()
+            groundSourceX: this.getRandomGroundType(chunkIndex)
         };
 
-        // Add clouds
-        const numClouds = 1 + Math.floor(Math.random() * 2);
+        // Add clouds using seeded random
+        const numClouds = 1 + Math.floor(this.seededRandom(chunkIndex * 2) * 2);
         for (let i = 0; i < numClouds; i++) {
             chunk.clouds.push({
-                x: chunk.startX + Math.random() * this.chunkWidth,
-                y: 20 + Math.random() * 60,
+                x: chunk.startX + this.seededRandom(chunkIndex * 3 + i) * this.chunkWidth,
+                y: 20 + this.seededRandom(chunkIndex * 4 + i) * 60,
                 sourceX: spriteDefinition.CLOUD.x,
                 sourceY: spriteDefinition.CLOUD.y
             });
@@ -206,9 +210,41 @@ class Horizon {
         return chunk;
     }
 
+    generateInitialChunks() {
+        // Generate chunks around starting position
+        for (let i = -1; i <= 1; i++) {
+            this.chunks.set(i, this.generateChunk(i));
+        }
+    }
+
+    updateChunks(dinoX) {
+        // Calculate which chunk the dino is in
+        const currentChunkIndex = Math.floor(dinoX / this.chunkWidth);
+        
+        // If we've moved to a new chunk
+        if (currentChunkIndex !== this.currentChunk) {
+            this.currentChunk = currentChunkIndex;
+            
+            // Generate chunks in both directions
+            for (let i = currentChunkIndex - 1; i <= currentChunkIndex + 1; i++) {
+                if (!this.chunks.has(i)) {
+                    this.chunks.set(i, this.generateChunk(i));
+                }
+            }
+            
+            // Remove chunks that are too far away
+            for (const [index, chunk] of this.chunks) {
+                if (Math.abs(index - currentChunkIndex) > 1) {
+                    console.log(`Removing chunk ${index}`);
+                    this.chunks.delete(index);
+                }
+            }
+        }
+    }
+
     draw(ctx, spriteSheet, dinoX, dinoY) {
-        // Draw chunks
-        this.chunks.forEach(chunk => {
+        // Draw all chunks in the map
+        for (const chunk of this.chunks.values()) {
             // Draw ground segment for this chunk
             ctx.drawImage(
                 spriteSheet,
@@ -254,37 +290,12 @@ class Horizon {
                     14
                 );
             });
-        });
+        }
 
         // Debug info
         ctx.fillStyle = 'black';
         ctx.fillText(`Chunk: ${this.currentChunk}`, dinoX, dinoY - 20);
         ctx.fillText(`Dino X: ${dinoX}`, dinoX, dinoY - 40);
-    }
-
-    updateChunks(dinoX) {
-        // Calculate which chunk the dino is in
-        const currentChunkIndex = Math.floor(dinoX / this.chunkWidth);
-        
-        // If we've moved to a new chunk
-        if (currentChunkIndex !== this.currentChunk) {
-            this.currentChunk = currentChunkIndex;
-            
-            // Remove chunks that are too far behind
-            this.chunks = this.chunks.filter(chunk => {
-                const chunkIndex = Math.floor(chunk.startX / this.chunkWidth);
-                if(chunkIndex < currentChunkIndex - 1) {
-                    console.log(`Removing chunk ${chunkIndex}`);
-                }
-                return chunkIndex >= currentChunkIndex - 1;
-            });
-            
-            // Add new chunks ahead
-            while (this.chunks.length < 3) {
-                const nextChunkIndex = Math.floor(this.chunks[this.chunks.length - 1].startX / this.chunkWidth) + 1;
-                this.chunks.push(this.generateChunk(nextChunkIndex));
-            }
-        }
     }
 }
 
