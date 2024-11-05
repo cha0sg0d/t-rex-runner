@@ -151,41 +151,71 @@ class Dino {
 class Horizon {
     constructor(canvas) {
         this.canvas = canvas;
-        // Cloud properties
-        this.clouds = [
-            {
-                x: 100,
-                y: 50,
-                sourceX: spriteDefinition.CLOUD.x,
-                sourceY: spriteDefinition.CLOUD.y
-            },
-            {
-                x: 400,
-                y: 30,
-                sourceX: spriteDefinition.CLOUD.x,
-                sourceY: spriteDefinition.CLOUD.y
-            },
-            {
-                x: 600,
-                y: 70,
-                sourceX: spriteDefinition.CLOUD.x,
-                sourceY: spriteDefinition.CLOUD.y
-            }
+        this.chunkWidth = Math.floor(canvas.width * 3/4); // Each chunk is 2/3 of canvas width
+        console.log(`Chunk width: ${this.chunkWidth} ${canvas.width}`);
+        this.currentChunk = 0; // Track which chunk the dino is in
+        
+        // Initialize first few chunks
+        this.chunks = [
+            this.generateChunk(0),
+            this.generateChunk(1),
+            this.generateChunk(2)
         ];
-        this.cloudWidth = 46;
-        this.cloudHeight = 14;
 
-        // Ground properties
-        this.groundY = canvas.height - 24; // Position ground at bottom of canvas
-        this.groundSourceWidth = 600;      // Width of ground sprite
-        this.groundSourceHeight = 12;      // Height of ground sprite
+        // Ground properties remain the same
+        this.groundY = canvas.height - 24;
+        this.groundSourceWidth = this.chunkWidth;
+        this.groundSourceHeight = 12;
         this.groundSourceX = spriteDefinition.HORIZON.x;
         this.groundSourceY = spriteDefinition.HORIZON.y;
     }
 
-    draw(ctx, spriteSheet) {
-        // Draw the ground
-        // We'll repeat the ground sprite to fill the canvas width
+    generateChunk(chunkIndex) {
+        // Generate a new chunk with random cloud positions
+        const chunk = {
+            startX: chunkIndex * this.chunkWidth,
+            clouds: []
+        };
+
+        // Add 1-2 clouds per chunk with random positions
+        const numClouds = 1 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < numClouds; i++) {
+            chunk.clouds.push({
+                x: chunk.startX + Math.random() * this.chunkWidth,
+                y: 20 + Math.random() * 60,
+                sourceX: spriteDefinition.CLOUD.x,
+                sourceY: spriteDefinition.CLOUD.y
+            });
+        }
+        return chunk;
+    }
+
+    updateChunks(dinoX) {
+        // Determine which chunk the dino is in
+        const newChunk = Math.floor(dinoX / this.chunkWidth);
+        
+        if (newChunk !== this.currentChunk) {
+            // Remove chunks that are too far behind
+            this.chunks = this.chunks.filter(chunk => 
+                chunk.startX >= (newChunk - 1) * this.chunkWidth
+            );
+
+            // Generate new chunks ahead
+            while (this.chunks.length < 3) {
+                const nextChunkIndex = Math.floor(this.chunks[this.chunks.length - 1].startX / this.chunkWidth) + 1;
+                this.chunks.push(this.generateChunk(nextChunkIndex));
+            }
+
+            this.currentChunk = newChunk;
+        }
+    }
+
+    draw(ctx, spriteSheet, dinoX, dinoY) {
+        // Draw which chunk the dino is in above the dino
+        ctx.fillText(`Chunk: ${this.currentChunk}`, dinoX, dinoY - 20);
+        ctx.fillText(`Dino X: ${dinoX}`, dinoX, dinoY - 40);
+
+        // Draw the ground (unchanged)
         let groundX = 0;
         while (groundX < this.canvas.width) {
             ctx.drawImage(
@@ -202,19 +232,21 @@ class Horizon {
             groundX += this.groundSourceWidth;
         }
 
-        // Draw all clouds
-        this.clouds.forEach(cloud => {
-            ctx.drawImage(
-                spriteSheet,
-                cloud.sourceX,
-                cloud.sourceY,
-                this.cloudWidth,
-                this.cloudHeight,
-                cloud.x,
-                cloud.y,
-                this.cloudWidth,
-                this.cloudHeight
-            );
+        // Draw clouds from active chunks
+        this.chunks.forEach(chunk => {
+            chunk.clouds.forEach(cloud => {
+                ctx.drawImage(
+                    spriteSheet,
+                    cloud.sourceX,
+                    cloud.sourceY,
+                    46, // cloudWidth
+                    14, // cloudHeight
+                    cloud.x,
+                    cloud.y,
+                    46,
+                    14
+                );
+            });
         });
     }
 }
@@ -247,6 +279,9 @@ class Game {
                 case 'ArrowRight':
                     this.dino.setDirection('right');
                     break;
+                case 'KeyF':  // Add debug key
+                    console.log(`Dino position - X: ${this.dino.x}, Y: ${this.dino.y}`);
+                    break;
             }
         });
 
@@ -266,12 +301,13 @@ class Game {
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.horizon.draw(this.ctx, this.spriteSheet);
+        this.horizon.draw(this.ctx, this.spriteSheet, this.dino.x, this.dino.y);
         this.dino.draw(this.ctx, this.spriteSheet);
     }
     
     gameLoop() {
         this.dino.update(this.canvas);
+        this.horizon.updateChunks(this.dino.x);
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
     }
