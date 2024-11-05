@@ -116,6 +116,77 @@ class Dino {
     }
 }
 
+class Horizon {
+    constructor(canvas) {
+        this.canvas = canvas;
+        // Cloud properties
+        this.clouds = [
+            {
+                x: 100,
+                y: 50,
+                sourceX: spriteDefinition.CLOUD.x,
+                sourceY: spriteDefinition.CLOUD.y
+            },
+            {
+                x: 400,
+                y: 30,
+                sourceX: spriteDefinition.CLOUD.x,
+                sourceY: spriteDefinition.CLOUD.y
+            },
+            {
+                x: 600,
+                y: 70,
+                sourceX: spriteDefinition.CLOUD.x,
+                sourceY: spriteDefinition.CLOUD.y
+            }
+        ];
+        this.cloudWidth = 46;
+        this.cloudHeight = 14;
+
+        // Ground properties
+        this.groundY = canvas.height - 24; // Position ground at bottom of canvas
+        this.groundSourceWidth = 600;      // Width of ground sprite
+        this.groundSourceHeight = 12;      // Height of ground sprite
+        this.groundSourceX = spriteDefinition.HORIZON.x;
+        this.groundSourceY = spriteDefinition.HORIZON.y;
+    }
+
+    draw(ctx, spriteSheet) {
+        // Draw the ground
+        // We'll repeat the ground sprite to fill the canvas width
+        let groundX = 0;
+        while (groundX < this.canvas.width) {
+            ctx.drawImage(
+                spriteSheet,
+                this.groundSourceX,
+                this.groundSourceY,
+                this.groundSourceWidth,
+                this.groundSourceHeight,
+                groundX,
+                this.groundY,
+                this.groundSourceWidth,
+                this.groundSourceHeight
+            );
+            groundX += this.groundSourceWidth;
+        }
+
+        // Draw all clouds
+        this.clouds.forEach(cloud => {
+            ctx.drawImage(
+                spriteSheet,
+                cloud.sourceX,
+                cloud.sourceY,
+                this.cloudWidth,
+                this.cloudHeight,
+                cloud.x,
+                cloud.y,
+                this.cloudWidth,
+                this.cloudHeight
+            );
+        });
+    }
+}
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -147,21 +218,21 @@ class Game {
             }
         });
         
+        this.horizon = new Horizon(this.canvas);
+        
         // Start the game loop
         this.gameLoop();
     }
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.horizon.draw(this.ctx, this.spriteSheet);
         this.dino.draw(this.ctx, this.spriteSheet);
     }
     
     gameLoop() {
-        // Update dino physics
         this.dino.update(this.canvas);
-        // Draw current frame
         this.draw();
-        // Recursively call the game loop
         requestAnimationFrame(() => this.gameLoop());
     }
 }
