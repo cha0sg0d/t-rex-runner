@@ -299,6 +299,123 @@ class Horizon {
     }
 }
 
+class NPC {
+    constructor(canvas, width, height) {
+        this.width = width;
+        this.height = height;
+        this.x = canvas.width;  // Start from right side
+        this.y = 0;  // Will be set by child classes
+        this.active = true;  // For collision detection
+    }
+
+    checkCollision(dino) {
+        if (!this.active) return false;
+        
+        return (
+            this.x < dino.x + dino.width &&
+            this.x + this.width > dino.x &&
+            this.y < dino.y + dino.height &&
+            this.y + this.height > dino.y
+        );
+    }
+
+    update() {
+        // Base update method to be overridden
+    }
+
+    draw(ctx, spriteSheet) {
+        // Base draw method to be overridden
+    }
+}
+
+class Bird extends NPC {
+    constructor(canvas) {
+        super(canvas, 46, 40);
+        this.y = canvas.height - this.height - 100;
+        this.sourceX = spriteDefinition.PTERODACTYL.x;
+        this.sourceY = spriteDefinition.PTERODACTYL.y;
+        this.speed = 3;
+        
+        // Add patrol area properties
+        this.patrolStartX = this.x;  // Starting point
+        this.patrolWidth = 200;      // Width of patrol area
+        this.movingLeft = true;      // Direction flag
+        
+        // Animation properties
+        this.frames = [
+            { x: spriteDefinition.PTERODACTYL.x, y: spriteDefinition.PTERODACTYL.y },
+            { x: spriteDefinition.PTERODACTYL.x + 46, y: spriteDefinition.PTERODACTYL.y }
+        ];
+        this.currentFrame = 0;
+        this.frameCount = 0;
+        this.FRAME_CHANGE_SPEED = 15;
+    }
+
+    update() {
+        if (!this.active) return;
+        
+        // Update position based on direction
+        if (this.movingLeft) {
+            this.x -= this.speed;
+            // Check if reached left boundary
+            if (this.x <= this.patrolStartX - this.patrolWidth) {
+                this.movingLeft = false;
+            }
+        } else {
+            this.x += this.speed;
+            // Check if reached right boundary
+            if (this.x >= this.patrolStartX) {
+                this.movingLeft = true;
+            }
+        }
+        
+        // Animation
+        this.frameCount++;
+        if (this.frameCount >= this.FRAME_CHANGE_SPEED) {
+            this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+            this.sourceX = this.frames[this.currentFrame].x;
+            this.sourceY = this.frames[this.currentFrame].y;
+            this.frameCount = 0;
+        }
+    }
+
+    draw(ctx, spriteSheet) {
+        if (!this.active) return;
+        
+        ctx.save();
+        
+        // Flip the bird sprite based on direction
+        if (!this.movingLeft) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(
+                spriteSheet,
+                this.sourceX,
+                this.sourceY,
+                this.width,
+                this.height,
+                -this.x - this.width, // Negative x position when flipped
+                this.y,
+                this.width,
+                this.height
+            );
+        } else {
+            ctx.drawImage(
+                spriteSheet,
+                this.sourceX,
+                this.sourceY,
+                this.width,
+                this.height,
+                this.x,
+                this.y,
+                this.width,
+                this.height
+            );
+        }
+        
+        ctx.restore();
+    }
+}
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -318,6 +435,7 @@ class Game {
         // Update event listeners
         document.addEventListener('keydown', (event) => {
             switch(event.code) {
+                case 'ArrowUp':
                 case 'Space':
                     this.dino.jump();
                     break;
@@ -347,6 +465,43 @@ class Game {
         this.cameraOffset = 0;
         this.CAMERA_FOLLOW_SPEED = 0.1; // Adjust for smoother/faster camera
         
+        // Add birds array
+        this.birds = [new Bird(this.canvas)];
+        
+        // Add new properties at the start of constructor
+        this.isInCombat = false;
+        this.currentBird = null;
+        
+        // Add combat view event listener
+        document.addEventListener('keydown', (event) => {
+            if (this.isInCombat && event.code === 'KeyW') {
+                alert('You waved!');
+                // this.exitCombat();
+            }
+        });
+        
+        // Add combat menu properties
+        this.combatOptions = ['FIGHT', 'WAVE', 'DANCE', 'RUN'];
+        this.selectedOption = 0;  // Currently selected menu item
+        
+        // Update combat key listeners
+        document.addEventListener('keydown', (event) => {
+            if (this.isInCombat) {
+                switch(event.code) {
+                    case 'ArrowLeft':
+                        this.selectedOption = Math.max(0, this.selectedOption - 1);
+                        break;
+                    case 'ArrowRight':
+                        this.selectedOption = Math.min(this.combatOptions.length - 1, this.selectedOption + 1);
+                        break;
+                    case 'Enter':
+                    case 'Space':
+                        this.handleCombatOption(this.combatOptions[this.selectedOption]);
+                        break;
+                }
+            }
+        });
+        
         // Start the game loop
         this.gameLoop();
     }
@@ -365,26 +520,169 @@ class Game {
         this.cameraOffset += (desiredCameraX - this.cameraOffset);
     }
 
+    enterCombat(bird) {
+        this.isInCombat = true;
+        this.currentBird = bird;
+    }
+
+    exitCombat() {
+        this.isInCombat = false;
+        this.currentBird = null;
+    }
+
+    checkCollisions() {
+        for (const bird of this.birds) {
+            if (bird.checkCollision(this.dino) && !this.isInCombat) {
+                this.enterCombat(bird);
+                return; // Stop checking other collisions
+            }
+        }
+    }
+
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Save the canvas state
+        if (this.isInCombat) {
+            // Draw combat view
+            this.drawCombatView();
+        } else {
+            // Normal game view drawing
+            this.ctx.save();
+            this.ctx.translate(-this.cameraOffset, 0);
+            this.horizon.draw(this.ctx, this.spriteSheet, this.dino.x, this.dino.y);
+            this.dino.draw(this.ctx, this.spriteSheet);
+            for (const bird of this.birds) {
+                bird.draw(this.ctx, this.spriteSheet);
+            }
+            this.ctx.restore();
+        }
+    }
+
+    drawCombatView() {
+        // Draw a lighter background
+        this.ctx.fillStyle = '#f7f7f7';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Fixed positions for combat sprites
+        const dinoScale = 2;
+        const birdScale = 2;
+        const dinoCombatX = 50;
+        const birdCombatX = this.canvas.width - 150;
+        const combatY = this.canvas.height / 2;
+        
+        // Draw larger dino on left side
         this.ctx.save();
-        
-        // Apply camera transform to everything
-        this.ctx.translate(-this.cameraOffset, 0);
-        
-        // Draw everything in world space
-        this.horizon.draw(this.ctx, this.spriteSheet, this.dino.x, this.dino.y);
-        this.dino.draw(this.ctx, this.spriteSheet);
-        
-        // Restore canvas state
+        this.ctx.scale(dinoScale, dinoScale);
+        this.ctx.drawImage(
+            this.spriteSheet,
+            this.dino.sourceX,
+            this.dino.sourceY,
+            this.dino.width,
+            this.dino.height,
+            dinoCombatX / dinoScale,
+            combatY / dinoScale,
+            this.dino.width,
+            this.dino.height
+        );
         this.ctx.restore();
+        
+        // Draw larger bird on right side
+        if (this.currentBird) {
+            this.ctx.save();
+            this.ctx.scale(birdScale, birdScale);
+            this.ctx.drawImage(
+                this.spriteSheet,
+                this.currentBird.sourceX,
+                this.currentBird.sourceY,
+                this.currentBird.width,
+                this.currentBird.height,
+                birdCombatX / birdScale,
+                combatY / birdScale,
+                this.currentBird.width,
+                this.currentBird.height
+            );
+            this.ctx.restore();
+        }
+        
+        // Draw debug info above dino
+        this.ctx.fillStyle = 'red';
+        this.ctx.font = '14px Arial';
+        this.ctx.fillText(`Dino Debug:`, dinoCombatX, combatY - 60);
+        this.ctx.fillText(`Game pos: (${Math.round(this.dino.x)}, ${Math.round(this.dino.y)})`, dinoCombatX, combatY - 40);
+        this.ctx.fillText(`Combat pos: (${dinoCombatX}, ${combatY})`, dinoCombatX, combatY - 20);
+        this.ctx.fillText(`Source: (${this.dino.sourceX}, ${this.dino.sourceY})`, dinoCombatX, combatY);
+
+        // Draw debug info above bird
+        if (this.currentBird) {
+            this.ctx.fillText(`Bird Debug:`, birdCombatX - 100, combatY - 60);
+            this.ctx.fillText(`Game pos: (${Math.round(this.currentBird.x)}, ${Math.round(this.currentBird.y)})`, birdCombatX - 100, combatY - 40);
+            this.ctx.fillText(`Combat pos: (${birdCombatX}, ${combatY})`, birdCombatX - 100, combatY - 20);
+            this.ctx.fillText(`Source: (${this.currentBird.sourceX}, ${this.currentBird.sourceY})`, birdCombatX - 100, combatY);
+        }
+        
+        // Draw menu box
+        const menuX = 20;
+        const menuY = this.canvas.height - 100;
+        const menuWidth = this.canvas.width - 40;
+        const menuHeight = 80;
+
+        // Draw menu background
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Draw options in a 2x2 grid
+        this.ctx.fillStyle = 'black';
+        this.ctx.font = '20px Arial';
+        const optionWidth = menuWidth / 2;
+        const optionHeight = menuHeight / 2;
+
+        this.combatOptions.forEach((option, index) => {
+            const col = index % 2;
+            const row = Math.floor(index / 2);
+            const x = menuX + (col * optionWidth) + 20;
+            const y = menuY + (row * optionHeight) + 30;
+
+            // Highlight selected option
+            if (index === this.selectedOption) {
+                this.ctx.fillStyle = '#FFD700';  // Gold color for selection
+                this.ctx.fillText('►', x - 15, y);
+                this.ctx.fillStyle = 'black';
+            }
+
+            this.ctx.fillText(option, x, y);
+        });
+    }
+
+    handleCombatOption(option) {
+        switch(option) {
+            case 'FIGHT':
+                console.log('Fighting!');
+                break;
+            case 'WAVE':
+                console.log('Waving!');
+                break;
+            case 'DANCE':
+                console.log('Dancing!');
+                break;
+            case 'RUN':
+                this.exitCombat();
+                break;
+        }
     }
     
     gameLoop() {
         this.dino.update(this.canvas);
         this.horizon.updateChunks(this.dino.x); // Still uses absolute position
+        
+        // Update and check birds
+        for (const bird of this.birds) {
+            bird.update();
+        }
+        this.checkCollisions();
+        
         this.updateCamera();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
