@@ -40,6 +40,17 @@ class Dino {
         this.velocityX = 0;
         this.speed = 5;        // Horizontal movement speed
         this.isMoving = false; // Track if dino is moving
+        
+        // Add dance animation properties
+        this.danceFrames = [
+            { x: spriteDefinition.TREX.x + 88, y: spriteDefinition.TREX.y },  // Right leg up
+            { x: spriteDefinition.TREX.x + 132, y: spriteDefinition.TREX.y }, // Left leg up
+        ];
+        this.isDancing = false;
+        this.danceFrameCount = 0;
+        this.DANCE_FRAME_SPEED = 3; // Faster than running animation
+        this.danceTimer = 0;
+        this.DANCE_DURATION = 60; // Dance for 60 frames (about 1 second)
     }
 
     setDirection(newDirection) {
@@ -73,6 +84,12 @@ class Dino {
         }
     }
 
+    startDancing() {
+        this.isDancing = true;
+        this.danceTimer = 0;
+        this.currentFrame = 0;
+    }
+
     update(canvas) {
         // Add horizontal movement
         this.x += this.velocityX;
@@ -87,7 +104,20 @@ class Dino {
                 this.velocityY = 0;
                 this.isJumping = false;
             }
-        } else {
+        } else if (this.isDancing) {
+            this.danceFrameCount++;
+            if (this.danceFrameCount >= this.DANCE_FRAME_SPEED) {
+                this.currentFrame = (this.currentFrame + 1) % this.danceFrames.length;
+                this.sourceX = this.danceFrames[this.currentFrame].x;
+                this.sourceY = this.danceFrames[this.currentFrame].y;
+                this.danceFrameCount = 0;
+            }
+
+            this.danceTimer++;
+            if (this.danceTimer >= this.DANCE_DURATION) {
+                this.isDancing = false;
+            }
+        } else if (!this.isJumping) {
             // Only animate if moving horizontally
             if (this.isMoving) {
                 this.frameCount++;
@@ -677,7 +707,9 @@ class Game {
     
     }
 
-    handleCombatOption(option) {
+    handleCombatOption(action) {
+        console.log(`Handling ${action} option`);
+        const option = action.toUpperCase();
         switch(option) {
             case 'FIGHT':
                 console.log('Fighting!');
@@ -687,6 +719,7 @@ class Game {
                 break;
             case 'DANCE':
                 console.log('Dancing!');
+                this.dino.startDancing();
                 break;
             case 'RUN':
                 this.exitCombat();
