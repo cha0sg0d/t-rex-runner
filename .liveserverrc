@@ -3,7 +3,7 @@
   "host": "localhost",
   "root": ".",
   "open": false,
-  "ignore": "node_modules",
+  "ignore": ["node_modules","git"],
   "wait": 1000,
   "mount": [],
   "logLevel": 2
