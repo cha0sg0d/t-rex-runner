@@ -504,6 +504,43 @@ class Game {
         
         // Start the game loop
         this.gameLoop();
+
+        this.combatMenu = document.getElementById('combatMenu');
+        this.setupCombatListeners();
+
+        // Add click handlers for combat options
+        document.querySelectorAll('.combat-option').forEach((button, index) => {
+            button.addEventListener('click', (e) => {
+                const action = e.target.textContent;
+                if (action === 'RUN') {
+                    this.exitCombat();
+                } else {
+                    console.log(`Clicked ${action} option`);
+                }
+            });
+        });
+
+        // Add debug button for combat view
+        this.createDebugButton();
+    }
+
+    createDebugButton() {
+        const debugButton = document.createElement('button');
+        debugButton.textContent = 'Debug Combat';
+        debugButton.style.position = 'fixed';
+        debugButton.style.top = '10px';
+        debugButton.style.right = '10px';
+        debugButton.style.zIndex = '1000';
+        debugButton.addEventListener('click', () => {
+            if (!this.isInCombat) {
+                // Create a temporary bird for combat testing
+                const testBird = new Bird(this.canvas);
+                this.enterCombat(testBird);
+            } else {
+                this.exitCombat();
+            }
+        });
+        document.body.appendChild(debugButton);
     }
 
     logDebugInfo() {
@@ -528,6 +565,10 @@ class Game {
     exitCombat() {
         this.isInCombat = false;
         this.currentBird = null;
+        // Hide the combat menu
+        document.getElementById('combatMenu').classList.add('hidden');
+        // Reset the selected option
+        this.selectedOption = 0;
     }
 
     checkCollisions() {
@@ -570,7 +611,7 @@ class Game {
         const birdCombatX = this.canvas.width - 150;
         const combatY = this.canvas.height / 2;
         
-        // Draw larger dino on left side
+        // Draw larger dino in bottom left
         this.ctx.save();
         this.ctx.scale(dinoScale, dinoScale);
         this.ctx.drawImage(
@@ -580,13 +621,13 @@ class Game {
             this.dino.width,
             this.dino.height,
             dinoCombatX / dinoScale,
-            combatY / dinoScale,
+            (this.canvas.height - 100) / dinoScale, // Position near bottom
             this.dino.width,
             this.dino.height
         );
         this.ctx.restore();
         
-        // Draw larger bird on right side
+        // Draw larger bird in top right
         if (this.currentBird) {
             this.ctx.save();
             this.ctx.scale(birdScale, birdScale);
@@ -597,7 +638,7 @@ class Game {
                 this.currentBird.width,
                 this.currentBird.height,
                 birdCombatX / birdScale,
-                combatY / birdScale,
+                50 / birdScale, // Position near top
                 this.currentBird.width,
                 this.currentBird.height
             );
@@ -620,40 +661,20 @@ class Game {
             this.ctx.fillText(`Source: (${this.currentBird.sourceX}, ${this.currentBird.sourceY})`, birdCombatX - 100, combatY);
         }
         
-        // Draw menu box
-        const menuX = 20;
-        const menuY = this.canvas.height - 100;
-        const menuWidth = this.canvas.width - 40;
-        const menuHeight = 80;
-
-        // Draw menu background
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
-        this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
-
-        // Draw options in a 2x2 grid
-        this.ctx.fillStyle = 'black';
-        this.ctx.font = '20px Arial';
-        const optionWidth = menuWidth / 2;
-        const optionHeight = menuHeight / 2;
-
-        this.combatOptions.forEach((option, index) => {
-            const col = index % 2;
-            const row = Math.floor(index / 2);
-            const x = menuX + (col * optionWidth) + 20;
-            const y = menuY + (row * optionHeight) + 30;
-
-            // Highlight selected option
-            if (index === this.selectedOption) {
-                this.ctx.fillStyle = '#FFD700';  // Gold color for selection
-                this.ctx.fillText('►', x - 15, y);
-                this.ctx.fillStyle = 'black';
-            }
-
-            this.ctx.fillText(option, x, y);
-        });
+        // Show the HTML menu
+    // Show and position the combat menu
+    const combatMenu = document.getElementById('combatMenu');
+    const canvas = document.getElementById('gameCanvas');
+    const canvasRect = canvas.getBoundingClientRect();
+    
+    // Position the menu relative to the canvas
+    combatMenu.style.position = 'absolute';
+    combatMenu.style.bottom = '20px';  // Distance from bottom of canvas
+    combatMenu.style.left = '50%';     // Center horizontally
+    combatMenu.style.transform = 'translateX(-50%)';  // Center adjustment
+    
+    combatMenu.classList.remove('hidden');
+    
     }
 
     handleCombatOption(option) {
@@ -686,6 +707,15 @@ class Game {
         this.updateCamera();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
+    }
+
+    setupCombatListeners() {
+        const combatOptions = document.querySelectorAll('.combat-option');
+        combatOptions.forEach(button => {
+            button.addEventListener('click', (e) => {
+                this.handleCombatOption(e.target.textContent.toLowerCase());
+            });
+        });
     }
 }
 

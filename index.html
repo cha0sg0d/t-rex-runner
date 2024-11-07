@@ -6,8 +6,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body class="bg-game-bg min-h-screen flex items-center justify-center">
-    <div class="container mx-auto px-4">
+    <div class="container mx-auto px-4 relative">
         <canvas id="gameCanvas" class="mx-auto border border-gray-300 shadow-lg"></canvas>
+        <div id="combatMenu" class="hidden absolute bottom-20 right-20 w-96">
+            <div class="bg-white p-4 rounded-lg shadow-xl">
+                <div class="grid grid-cols-2 gap-4">
+                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">FIGHT</button>
+                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">WAVE</button>
+                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">DANCE</button>
+                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">RUN</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="game.js"></script>
 </body>
