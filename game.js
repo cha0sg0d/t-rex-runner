@@ -691,40 +691,58 @@ class Game {
             this.ctx.fillText(`Source: (${this.currentBird.sourceX}, ${this.currentBird.sourceY})`, birdCombatX - 100, combatY);
         }
         
-        // Show the HTML menu
-    // Show and position the combat menu
-    const combatMenu = document.getElementById('combatMenu');
-    const canvas = document.getElementById('gameCanvas');
-    const canvasRect = canvas.getBoundingClientRect();
-    
-    // Position the menu relative to the canvas
-    combatMenu.style.position = 'absolute';
-    combatMenu.style.bottom = '20px';  // Distance from bottom of canvas
-    combatMenu.style.left = '50%';     // Center horizontally
-    combatMenu.style.transform = 'translateX(-50%)';  // Center adjustment
-    
-    combatMenu.classList.remove('hidden');
-    
+        // Show and position the combat menu
+        const combatMenu = document.getElementById('combatMenu');
+        const canvas = document.getElementById('gameCanvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        // Position the menu in the bottom center-right of the canvas
+        combatMenu.style.position = 'absolute';
+        combatMenu.style.bottom = '20px';  // Distance from bottom of canvas
+        combatMenu.style.left = `${canvasRect.left + (canvas.width * 0.5)}px`;  // Changed from 0.6 to 0.5 for more centered position
+        combatMenu.style.transform = 'translateX(-50%)';  // Center the menu
+        // Draw outline around combat menu
+        // combatMenu.style.border = '4px solid #FFFFFF';
+        // combatMenu.style.borderRadius = '8px';
+        // combatMenu.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+        
+        combatMenu.classList.remove('hidden');
     }
 
     handleCombatOption(action) {
-        console.log(`Handling ${action} option`);
-        const option = action.toUpperCase();
+        const option = action.toUpperCase().trim();
+        const combatMenu = document.getElementById('combatMenu');
+        const originalContent = combatMenu.innerHTML;
+        
+        combatMenu.innerHTML = `
+            <div class="col-span-2 flex items-center justify-center h-full">
+                <span class="text-2xl font-bold">${option}!</span>
+            </div>
+        `;
+        
+
+        console.log(`Handling ${option} option`);
+        // Handle specific actions
         switch(option) {
-            case 'FIGHT':
-                console.log('Fighting!');
-                break;
             case 'WAVE':
-                console.log('Waving!');
+                console.log('WAVE');
                 break;
             case 'DANCE':
-                console.log('Dancing!');
                 this.dino.startDancing();
+                break;
+            case 'FIGHT':
+                console.log('FIGHT');
                 break;
             case 'RUN':
                 this.exitCombat();
                 break;
         }
+        
+        // Return to original menu after delay
+        setTimeout(() => {
+            combatMenu.innerHTML = originalContent;
+            this.setupCombatListeners();
+        }, 1000);
     }
     
     gameLoop() {

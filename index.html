@@ -8,15 +8,11 @@
 <body class="bg-game-bg min-h-screen flex items-center justify-center">
     <div class="container mx-auto px-4 relative">
         <canvas id="gameCanvas" class="mx-auto border border-gray-300 shadow-lg"></canvas>
-        <div id="combatMenu" class="hidden absolute bottom-20 right-20 w-96">
-            <div class="bg-white p-4 rounded-lg shadow-xl">
-                <div class="grid grid-cols-2 gap-4">
-                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">FIGHT</button>
-                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">WAVE</button>
-                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">DANCE</button>
-                    <button class="combat-option font-pixel p-3 bg-gray-100 hover:bg-gray-200 rounded">RUN</button>
-                </div>
-            </div>
+        <div id="combatMenu" class="hidden absolute grid grid-cols-2 gap-4 w-96 min-h-[120px] rounded-lg shadow-lg">
+            <button class="combat-option bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">FIGHT</button>
+            <button class="combat-option bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">WAVE</button>
+            <button class="combat-option bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">DANCE</button>
+            <button class="combat-option bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">RUN</button>
         </div>
     </div>
     <script src="game.js"></script>
