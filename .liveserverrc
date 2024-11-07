@@ -1,0 +1,10 @@
+{
+  "port": 3000,
+  "host": "localhost",
+  "root": ".",
+  "open": false,
+  "ignore": "node_modules",
+  "wait": 1000,
+  "mount": [],
+  "logLevel": 2
+}
