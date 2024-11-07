@@ -754,13 +754,8 @@ class Game {
         const combatMenu = document.getElementById('combatMenu');
         const originalContent = combatMenu.innerHTML;
         
-        combatMenu.innerHTML = `
-            <div class="col-span-2 flex items-center justify-center h-full">
-                <span class="text-2xl font-bold">${option}!</span>
-            </div>
-        `;
-        
 
+        let updateCombatMenu = true;
         console.log(`Handling ${option} option`);
         // Handle specific actions
         switch(option) {
@@ -774,8 +769,17 @@ class Game {
                 console.log('FIGHT');
                 break;
             case 'RUN':
+                updateCombatMenu = false;
                 this.exitCombat();
                 break;
+        }
+
+        if (updateCombatMenu) {
+            combatMenu.innerHTML = `
+            <div class="col-span-2 flex items-center justify-center h-full">
+                <span class="text-2xl font-bold">${option}!</span>
+                </div>
+            `;
         }
         
         // Return to original menu after delay
