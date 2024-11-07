@@ -552,6 +552,12 @@ class Game {
 
         // Add debug button for combat view
         this.createDebugButton();
+
+        // Add fade transition properties
+        this.fadeAlpha = 0;
+        this.isFading = false;
+        this.FADE_SPEED = 0.05;
+        this.fadeCallback = null;
     }
 
     createDebugButton() {
@@ -588,17 +594,33 @@ class Game {
     }
 
     enterCombat(bird) {
-        this.isInCombat = true;
-        this.currentBird = bird;
+        // Start fade in transition
+        this.isFading = true;
+        this.fadeAlpha = 0;
+        this.fadeCallback = () => {
+            this.isInCombat = true;
+            this.currentBird = bird;
+            // Start fade out
+            this.isFading = true;
+            this.fadeAlpha = 1;
+            this.fadeCallback = null;
+        };
     }
 
     exitCombat() {
-        this.isInCombat = false;
-        this.currentBird = null;
-        // Hide the combat menu
-        document.getElementById('combatMenu').classList.add('hidden');
-        // Reset the selected option
-        this.selectedOption = 0;
+        // Start fade in transition
+        this.isFading = true;
+        this.fadeAlpha = 0;
+        this.fadeCallback = () => {
+            this.isInCombat = false;
+            this.currentBird = null;
+            document.getElementById('combatMenu').classList.add('hidden');
+            this.selectedOption = 0;
+            // Start fade out
+            this.isFading = true;
+            this.fadeAlpha = 1;
+            this.fadeCallback = null;
+        };
     }
 
     checkCollisions() {
@@ -614,7 +636,6 @@ class Game {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         if (this.isInCombat) {
-            // Draw combat view
             this.drawCombatView();
         } else {
             // Normal game view drawing
@@ -626,6 +647,25 @@ class Game {
                 bird.draw(this.ctx, this.spriteSheet);
             }
             this.ctx.restore();
+        }
+
+        // Draw fade overlay
+        if (this.isFading) {
+            this.ctx.fillStyle = `rgba(0, 0, 0, ${this.fadeAlpha})`;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Update fade
+            if (this.fadeCallback) {
+                this.fadeAlpha += this.FADE_SPEED;
+                if (this.fadeAlpha >= 1) {
+                    this.fadeCallback();
+                }
+            } else {
+                this.fadeAlpha -= this.FADE_SPEED;
+                if (this.fadeAlpha <= 0) {
+                    this.isFading = false;
+                }
+            }
         }
     }
 
