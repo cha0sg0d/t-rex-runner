@@ -674,15 +674,43 @@ class Game {
         this.ctx.fillStyle = '#f7f7f7';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
+        // Draw decorative clouds
+        const clouds = [
+            { x: 50, y: 30, scale: 1.2 },
+            { x: this.canvas.width - 100, y: 50, scale: 0.8 },
+            { x: this.canvas.width/2 - 80, y: 20, scale: 1 },
+            { x: this.canvas.width/3, y: 70, scale: 0.9 },
+            { x: (this.canvas.width/4) * 3, y: 40, scale: 1.1 }
+        ];
+        
+        clouds.forEach(cloud => {
+            this.ctx.save();
+            this.ctx.scale(cloud.scale, cloud.scale);
+            this.ctx.drawImage(
+                this.spriteSheet,
+                spriteDefinition.CLOUD.x,
+                spriteDefinition.CLOUD.y,
+                46,  // Cloud width in sprite sheet
+                14,  // Cloud height in sprite sheet
+                cloud.x / cloud.scale,
+                cloud.y / cloud.scale,
+                46,
+                14
+            );
+            this.ctx.restore();
+        });
+        
         // Fixed positions for combat sprites
-        const dinoScale = 2;
-        const birdScale = 2;
+        const dinoScale = 3;
+        const birdScale = 3;
         const dinoCombatX = 50;
         const birdCombatX = this.canvas.width - 150;
         const combatY = this.canvas.height / 2;
         
         // Draw larger dino in bottom left
         this.ctx.save();
+        // Set crisp pixel scaling
+        this.ctx.imageSmoothingEnabled = false;
         this.ctx.scale(dinoScale, dinoScale);
         this.ctx.drawImage(
             this.spriteSheet,
@@ -700,6 +728,8 @@ class Game {
         // Draw larger bird in top right
         if (this.currentBird) {
             this.ctx.save();
+            // Set crisp pixel scaling
+            this.ctx.imageSmoothingEnabled = false;
             this.ctx.scale(birdScale, birdScale);
             this.ctx.drawImage(
                 this.spriteSheet,
