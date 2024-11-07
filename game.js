@@ -719,7 +719,7 @@ class Game {
             this.dino.width,
             this.dino.height,
             dinoCombatX / dinoScale,
-            (this.canvas.height - 100) / dinoScale, // Position near bottom
+            (this.canvas.height - 150) / dinoScale, // Position near bottom
             this.dino.width,
             this.dino.height
         );
