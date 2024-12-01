@@ -207,7 +207,8 @@
         JUMP: { '38': 1, '32': 1 },  // Up, spacebar
         DUCK: { '40': 1 },  // Down
         RESTART: { '13': 1 },  // Enter
-        SHOOT: { '87': 1 }  // W key
+        SHOOT_WATER: { '87': 1 }, // W key
+        SHOOT_FIRE: { '69': 1 }  // E key
     };
 
 
@@ -700,9 +701,13 @@
                 }
 
                 // Add shooting when W is pressed
-                if (this.playing && !this.crashed && Runner.keycodes.SHOOT[e.keyCode]) {
-                    console.log(`SHOOT`)
-                    this.tRex.shoot();
+                if (this.playing && !this.crashed && Runner.keycodes.SHOOT_WATER[e.keyCode]) {
+                    console.log(`WATER`)
+                    this.tRex.shoot('water');
+                }
+                if (this.playing && !this.crashed && Runner.keycodes.SHOOT_FIRE[e.keyCode]) {
+                    console.log(`FIRE`)
+                    this.tRex.shoot('fire');
                 }
 
                 if (this.crashed && e.type == Runner.events.TOUCHSTART &&
@@ -1403,9 +1408,13 @@
 
                 this.canvasCtx.save();
                 
-                // Add grey filter if inactive
+                // Add color tint based on what hit the obstacle
                 if (this.inactive) {
-                    this.canvasCtx.filter = 'grayscale(100%) opacity(50%)';
+                    if (this.hitByWater) {
+                        this.canvasCtx.filter = 'grayscale(100%) opacity(70%) sepia(100%) saturate(400%) hue-rotate(140deg)'; // Blue tint
+                    } else {
+                        this.canvasCtx.filter = 'grayscale(100%) opacity(70%) sepia(100%) saturate(400%) hue-rotate(-50deg)'; // Red tint
+                    }
                 }
 
                 this.canvasCtx.drawImage(Runner.imageSprite,
@@ -1911,13 +1920,14 @@
         /**
          * Shoot a projectile
          */
-        shoot: function() {
+        shoot: function(projectileType) {
             this.projectiles.push({
                 x: this.xPos + this.config.WIDTH,
                 y: this.yPos + this.config.HEIGHT/2,
                 width: 10,
                 height: 5,
-                speed: 5 
+                speed: 5 ,
+                type: projectileType
             });
         },
 
@@ -1934,9 +1944,16 @@
                     return false;
                 }
                 
+                // Check for collisions with obstacles
+                var collision = checkForProjectileCollision(projectile, Runner.instance_.horizon.obstacles);
+                if (collision) {
+                    return false; // Remove projectile on collision
+                }
+                
                 // Draw projectile
                 this.canvasCtx.save();
-                this.canvasCtx.fillStyle = '#000000';
+                // Blue if water, red if fire
+                this.canvasCtx.fillStyle = projectile.type === 'water' ? '#0000FF' : '#FF0000';
                 this.canvasCtx.fillRect(
                     projectile.x, 
                     projectile.y, 
@@ -2184,7 +2201,7 @@
             this.canvasCtx.save();
             this.canvasCtx.globalAlpha = .8;
             for (var i = this.highScore.length - 1; i >= 0; i--) {
-                this.draw(i, parseInt(this.highScore[i], 10), true);
+                this.draw(i, parseInt(this.highScore[i], true));
             }
             this.canvasCtx.restore();
         },
@@ -2759,7 +2776,7 @@
 
                 this.obstacles.push(new Obstacle(this.canvasCtx, obstacleType,
                     obstacleSpritePos, this.dimensions,
-                    this.gapCoefficient, currentSpeed, obstacleType.width, true));
+                    this.gapCoefficient, currentSpeed, obstacleType.width, false));
 
                 this.obstacleHistory.unshift(obstacleType.type);
 
@@ -2812,6 +2829,42 @@
                 this.dimensions.WIDTH));
         }
     };
+
+    /**
+     * Check for a collision between a projectile and obstacles.
+     * @param {Object} projectile
+     * @param {Array<Obstacle>} obstacles
+     * @return {boolean} Whether there was a collision.
+     */
+    function checkForProjectileCollision(projectile, obstacles) {
+        // Create simple box for projectile
+        var projectileBox = new CollisionBox(
+            projectile.x,
+            projectile.y, 
+            projectile.width,
+            projectile.height
+        );
+
+        // Check each obstacle
+        for (var i = 0; i < obstacles.length; i++) {
+            var obstacle = obstacles[i];
+            if (!obstacle.inactive) {
+                var obstacleBox = new CollisionBox(
+                    obstacle.xPos + 1,
+                    obstacle.yPos + 1,
+                    obstacle.width - 2,
+                    obstacle.typeConfig.height - 2
+                );
+
+                if (boxCompare(projectileBox, obstacleBox)) {
+                    obstacle.inactive = true;
+                    obstacle.hitByWater = projectile.type === 'water';
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 })();
 
 
