@@ -578,8 +578,11 @@
                     this.gameOver();
                 }
 
-                var playAchievementSound = this.distanceMeter.update(deltaTime,
-                    Math.ceil(this.distanceRan));
+                var playAchievementSound = this.distanceMeter.update(
+                    deltaTime,
+                    Math.ceil(this.distanceRan),
+                    this.tRex.shotCount  // Pass the shot count
+                );
 
                 if (playAchievementSound) {
                     this.playSound(this.soundFx.SCORE);
@@ -1949,14 +1952,12 @@
             this.projectiles = this.projectiles.filter(projectile => {
                 projectile.x += projectile.speed;
                 
-                // Remove if off screen
-                if (projectile.x > this.canvas.width) {
-                    return false;
-                }
+      
                 
                 // Check for collisions with obstacles
                 var collision = checkForProjectileCollision(projectile, Runner.instance_.horizon.obstacles);
                 if (collision) {
+                    return false;
                 }
                 
                 // Draw projectile
@@ -2047,7 +2048,11 @@
         FLASH_DURATION: 1000 / 4,
 
         // Flash iterations for achievement animation.
-        FLASH_ITERATIONS: 3
+        FLASH_ITERATIONS: 3,
+        
+        // Shot count position offset
+        SHOT_COUNT_X_OFFSET: 40,
+        SHOT_COUNT_Y_OFFSET: 0
     };
 
 
@@ -2137,11 +2142,12 @@
 
         /**
          * Update the distance meter.
-         * @param {number} distance
          * @param {number} deltaTime
+         * @param {number} distance
+         * @param {number} shotCount
          * @return {boolean} Whether the acheivement sound fx should be played.
          */
-        update: function (deltaTime, distance) {
+        update: function (deltaTime, distance, shotCount) {
             var paint = true;
             var playSound = false;
 
@@ -2199,6 +2205,12 @@
             }
 
             this.drawHighScore();
+
+            // Draw the shot count
+            if (paint) {
+                this.drawShotCount(shotCount || 0);
+            }
+
             return playSound;
         },
 
@@ -2233,6 +2245,29 @@
         reset: function () {
             this.update(0);
             this.acheivement = false;
+        },
+
+        /**
+         * Draw the shot count.
+         * @param {number} shotCount
+         */
+        drawShotCount: function(shotCount) {
+            this.canvasCtx.save();
+            
+            // Set text properties
+            this.canvasCtx.font = '12px "Press Start 2P"';
+            this.canvasCtx.fillStyle = '#535353';
+            this.canvasCtx.textAlign = 'right';
+            
+            // Draw the shot count
+            var text = 'SHOTS: ' + shotCount;
+            this.canvasCtx.fillText(
+                text,
+                this.x - this.config.SHOT_COUNT_X_OFFSET,
+                this.y + this.config.SHOT_COUNT_Y_OFFSET + 13
+            );
+            
+            this.canvasCtx.restore();
         }
     };
 
