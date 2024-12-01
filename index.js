@@ -1139,6 +1139,11 @@
      * @return {Array<CollisionBox>}
      */
     function checkForCollision(obstacle, tRex, opt_canvasCtx) {
+        // Skip collision check if obstacle is inactive
+        if (obstacle.inactive) {
+            return false;
+        }
+
         var obstacleBoxXPos = Runner.defaultDimensions.WIDTH + obstacle.xPos;
 
         // Adjustments are made to the bounding box as there is a 1 pixel white
@@ -1275,9 +1280,10 @@
      * @param {number} gapCoefficient Mutipler in determining the gap.
      * @param {number} speed
      * @param {number} opt_xOffset
+     * @param {boolean} inactive
      */
     function Obstacle(canvasCtx, type, spriteImgPos, dimensions,
-        gapCoefficient, speed, opt_xOffset) {
+        gapCoefficient, speed, opt_xOffset, inactive) {
 
         this.canvasCtx = canvasCtx;
         this.spritePos = spriteImgPos;
@@ -1296,6 +1302,8 @@
         // For animated obstacles.
         this.currentFrame = 0;
         this.timer = 0;
+
+        this.inactive = inactive ||false; // Add this new property
 
         this.init(speed);
     };
@@ -1383,11 +1391,20 @@
                     sourceX += sourceWidth * this.currentFrame;
                 }
 
+                this.canvasCtx.save();
+                
+                // Add grey filter if inactive
+                if (this.inactive) {
+                    this.canvasCtx.filter = 'grayscale(100%) opacity(50%)';
+                }
+
                 this.canvasCtx.drawImage(Runner.imageSprite,
                     sourceX, this.spritePos.y,
                     sourceWidth * this.size, sourceHeight,
                     this.xPos, this.yPos,
                     this.typeConfig.width * this.size, this.typeConfig.height);
+
+                this.canvasCtx.restore();
             },
 
             /**
@@ -2689,7 +2706,7 @@
 
                 this.obstacles.push(new Obstacle(this.canvasCtx, obstacleType,
                     obstacleSpritePos, this.dimensions,
-                    this.gapCoefficient, currentSpeed, obstacleType.width));
+                    this.gapCoefficient, currentSpeed, obstacleType.width, true));
 
                 this.obstacleHistory.unshift(obstacleType.type);
 
