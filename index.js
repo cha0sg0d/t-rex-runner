@@ -1590,7 +1590,10 @@
         this.projectiles = [];
 
         this.init();
-    };
+
+        // Add after other property initializations
+        this.shotCount = 0;
+    }
 
 
     /**
@@ -1915,6 +1918,10 @@
             this.midair = false;
             this.speedDrop = false;
             this.jumpCount = 0;
+
+            // Add to existing reset method
+            this.shotCount = 0;
+            this.projectiles = [];
         },
 
         /**
@@ -1926,9 +1933,12 @@
                 y: this.yPos + this.config.HEIGHT/2,
                 width: 10,
                 height: 5,
-                speed: 5 ,
+                speed: 5,
                 type: projectileType
             });
+            
+            this.shotCount++;
+            console.log(this.shotCount);
         },
 
         /**
@@ -1947,17 +1957,15 @@
                 // Check for collisions with obstacles
                 var collision = checkForProjectileCollision(projectile, Runner.instance_.horizon.obstacles);
                 if (collision) {
-                    return false; // Remove projectile on collision
                 }
                 
                 // Draw projectile
                 this.canvasCtx.save();
-                // Blue if water, red if fire
                 this.canvasCtx.fillStyle = projectile.type === 'water' ? '#0000FF' : '#FF0000';
                 this.canvasCtx.fillRect(
-                    projectile.x, 
-                    projectile.y, 
-                    projectile.width, 
+                    projectile.x,
+                    projectile.y,
+                    projectile.width,
                     projectile.height
                 );
                 this.canvasCtx.restore();
