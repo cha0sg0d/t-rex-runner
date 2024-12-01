@@ -206,7 +206,8 @@
     Runner.keycodes = {
         JUMP: { '38': 1, '32': 1 },  // Up, spacebar
         DUCK: { '40': 1 },  // Down
-        RESTART: { '13': 1 }  // Enter
+        RESTART: { '13': 1 },  // Enter
+        SHOOT: { '87': 1 }  // W key
     };
 
 
@@ -542,6 +543,9 @@
                     this.tRex.updateJump(deltaTime);
                 }
 
+                // Add projectile updates
+                this.tRex.updateProjectiles();
+
                 this.runningTime += deltaTime;
                 var hasObstacles = this.runningTime > this.config.CLEAR_TIME;
 
@@ -693,6 +697,12 @@
                         this.playSound(this.soundFx.BUTTON_PRESS);
                         this.tRex.startJump(this.currentSpeed);
                     }
+                }
+
+                // Add shooting when W is pressed
+                if (this.playing && !this.crashed && Runner.keycodes.SHOOT[e.keyCode]) {
+                    console.log(`SHOOT`)
+                    this.tRex.shoot();
                 }
 
                 if (this.crashed && e.type == Runner.events.TOUCHSTART &&
@@ -1568,6 +1578,8 @@
         this.jumpCount = 0;
         this.jumpspotX = 0;
 
+        this.projectiles = [];
+
         this.init();
     };
 
@@ -1894,6 +1906,47 @@
             this.midair = false;
             this.speedDrop = false;
             this.jumpCount = 0;
+        },
+
+        /**
+         * Shoot a projectile
+         */
+        shoot: function() {
+            this.projectiles.push({
+                x: this.xPos + this.config.WIDTH,
+                y: this.yPos + this.config.HEIGHT/2,
+                width: 10,
+                height: 5,
+                speed: 5 
+            });
+        },
+
+        /**
+         * Update and draw projectiles
+         */
+        updateProjectiles: function() {
+            // Update positions
+            this.projectiles = this.projectiles.filter(projectile => {
+                projectile.x += projectile.speed;
+                
+                // Remove if off screen
+                if (projectile.x > this.canvas.width) {
+                    return false;
+                }
+                
+                // Draw projectile
+                this.canvasCtx.save();
+                this.canvasCtx.fillStyle = '#000000';
+                this.canvasCtx.fillRect(
+                    projectile.x, 
+                    projectile.y, 
+                    projectile.width, 
+                    projectile.height
+                );
+                this.canvasCtx.restore();
+                
+                return true;
+            });
         }
     };
 
