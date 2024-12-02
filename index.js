@@ -206,7 +206,9 @@
     Runner.keycodes = {
         JUMP: { '38': 1, '32': 1 },  // Up, spacebar
         DUCK: { '40': 1 },  // Down
-        RESTART: { '13': 1 }  // Enter
+        RESTART: { '13': 1 },  // Enter
+        SHOOT_WATER: { '87': 1 }, // W key
+        SHOOT_FIRE: { '69': 1 }  // E key
     };
 
 
@@ -542,6 +544,9 @@
                     this.tRex.updateJump(deltaTime);
                 }
 
+                // Add projectile updates
+                this.tRex.updateProjectiles();
+
                 this.runningTime += deltaTime;
                 var hasObstacles = this.runningTime > this.config.CLEAR_TIME;
 
@@ -573,8 +578,11 @@
                     this.gameOver();
                 }
 
-                var playAchievementSound = this.distanceMeter.update(deltaTime,
-                    Math.ceil(this.distanceRan));
+                var playAchievementSound = this.distanceMeter.update(
+                    deltaTime,
+                    Math.ceil(this.distanceRan),
+                    this.tRex.shotCount  // Pass the shot count
+                );
 
                 if (playAchievementSound) {
                     this.playSound(this.soundFx.SCORE);
@@ -693,6 +701,16 @@
                         this.playSound(this.soundFx.BUTTON_PRESS);
                         this.tRex.startJump(this.currentSpeed);
                     }
+                }
+
+                // Add shooting when W is pressed
+                if (this.playing && !this.crashed && Runner.keycodes.SHOOT_WATER[e.keyCode]) {
+                    console.log(`WATER`)
+                    this.tRex.shoot('water');
+                }
+                if (this.playing && !this.crashed && Runner.keycodes.SHOOT_FIRE[e.keyCode]) {
+                    console.log(`FIRE`)
+                    this.tRex.shoot('fire');
                 }
 
                 if (this.crashed && e.type == Runner.events.TOUCHSTART &&
@@ -1139,6 +1157,11 @@
      * @return {Array<CollisionBox>}
      */
     function checkForCollision(obstacle, tRex, opt_canvasCtx) {
+        // Skip collision check if obstacle is inactive
+        if (obstacle.inactive) {
+            return false;
+        }
+
         var obstacleBoxXPos = Runner.defaultDimensions.WIDTH + obstacle.xPos;
 
         // Adjustments are made to the bounding box as there is a 1 pixel white
@@ -1275,9 +1298,10 @@
      * @param {number} gapCoefficient Mutipler in determining the gap.
      * @param {number} speed
      * @param {number} opt_xOffset
+     * @param {boolean} inactive
      */
     function Obstacle(canvasCtx, type, spriteImgPos, dimensions,
-        gapCoefficient, speed, opt_xOffset) {
+        gapCoefficient, speed, opt_xOffset, inactive) {
 
         this.canvasCtx = canvasCtx;
         this.spritePos = spriteImgPos;
@@ -1296,6 +1320,8 @@
         // For animated obstacles.
         this.currentFrame = 0;
         this.timer = 0;
+
+        this.inactive = inactive ||false; // Add this new property
 
         this.init(speed);
     };
@@ -1383,11 +1409,24 @@
                     sourceX += sourceWidth * this.currentFrame;
                 }
 
+                this.canvasCtx.save();
+                
+                // Add color tint based on what hit the obstacle
+                if (this.inactive) {
+                    if (this.hitByWater) {
+                        this.canvasCtx.filter = 'grayscale(100%) opacity(70%) sepia(100%) saturate(400%) hue-rotate(140deg)'; // Blue tint
+                    } else {
+                        this.canvasCtx.filter = 'grayscale(100%) opacity(70%) sepia(100%) saturate(400%) hue-rotate(-50deg)'; // Red tint
+                    }
+                }
+
                 this.canvasCtx.drawImage(Runner.imageSprite,
                     sourceX, this.spritePos.y,
                     sourceWidth * this.size, sourceHeight,
                     this.xPos, this.yPos,
                     this.typeConfig.width * this.size, this.typeConfig.height);
+
+                this.canvasCtx.restore();
             },
 
             /**
@@ -1551,8 +1590,13 @@
         this.jumpCount = 0;
         this.jumpspotX = 0;
 
+        this.projectiles = [];
+
         this.init();
-    };
+
+        // Add after other property initializations
+        this.shotCount = 0;
+    }
 
 
     /**
@@ -1877,6 +1921,58 @@
             this.midair = false;
             this.speedDrop = false;
             this.jumpCount = 0;
+
+            // Add to existing reset method
+            this.shotCount = 0;
+            this.projectiles = [];
+        },
+
+        /**
+         * Shoot a projectile
+         */
+        shoot: function(projectileType) {
+            this.projectiles.push({
+                x: this.xPos + this.config.WIDTH,
+                y: this.yPos + this.config.HEIGHT/2,
+                width: 10,
+                height: 5,
+                speed: 5,
+                type: projectileType
+            });
+            
+            this.shotCount++;
+            console.log(this.shotCount);
+        },
+
+        /**
+         * Update and draw projectiles
+         */
+        updateProjectiles: function() {
+            // Update positions
+            this.projectiles = this.projectiles.filter(projectile => {
+                projectile.x += projectile.speed;
+                
+      
+                
+                // Check for collisions with obstacles
+                var collision = checkForProjectileCollision(projectile, Runner.instance_.horizon.obstacles);
+                if (collision) {
+                    return false;
+                }
+                
+                // Draw projectile
+                this.canvasCtx.save();
+                this.canvasCtx.fillStyle = projectile.type === 'water' ? '#0000FF' : '#FF0000';
+                this.canvasCtx.fillRect(
+                    projectile.x,
+                    projectile.y,
+                    projectile.width,
+                    projectile.height
+                );
+                this.canvasCtx.restore();
+                
+                return true;
+            });
         }
     };
 
@@ -1952,7 +2048,11 @@
         FLASH_DURATION: 1000 / 4,
 
         // Flash iterations for achievement animation.
-        FLASH_ITERATIONS: 3
+        FLASH_ITERATIONS: 3,
+        
+        // Shot count position offset
+        SHOT_COUNT_X_OFFSET: 40,
+        SHOT_COUNT_Y_OFFSET: 0
     };
 
 
@@ -2042,11 +2142,12 @@
 
         /**
          * Update the distance meter.
-         * @param {number} distance
          * @param {number} deltaTime
+         * @param {number} distance
+         * @param {number} shotCount
          * @return {boolean} Whether the acheivement sound fx should be played.
          */
-        update: function (deltaTime, distance) {
+        update: function (deltaTime, distance, shotCount) {
             var paint = true;
             var playSound = false;
 
@@ -2104,6 +2205,12 @@
             }
 
             this.drawHighScore();
+
+            // Draw the shot count
+            if (paint) {
+                this.drawShotCount(shotCount || 0);
+            }
+
             return playSound;
         },
 
@@ -2114,7 +2221,7 @@
             this.canvasCtx.save();
             this.canvasCtx.globalAlpha = .8;
             for (var i = this.highScore.length - 1; i >= 0; i--) {
-                this.draw(i, parseInt(this.highScore[i], 10), true);
+                this.draw(i, parseInt(this.highScore[i], true));
             }
             this.canvasCtx.restore();
         },
@@ -2138,6 +2245,29 @@
         reset: function () {
             this.update(0);
             this.acheivement = false;
+        },
+
+        /**
+         * Draw the shot count.
+         * @param {number} shotCount
+         */
+        drawShotCount: function(shotCount) {
+            this.canvasCtx.save();
+            
+            // Set text properties
+            this.canvasCtx.font = '12px "Press Start 2P"';
+            this.canvasCtx.fillStyle = '#535353';
+            this.canvasCtx.textAlign = 'right';
+            
+            // Draw the shot count
+            var text = 'SHOTS: ' + shotCount;
+            this.canvasCtx.fillText(
+                text,
+                this.x - this.config.SHOT_COUNT_X_OFFSET,
+                this.y + this.config.SHOT_COUNT_Y_OFFSET + 13
+            );
+            
+            this.canvasCtx.restore();
         }
     };
 
@@ -2689,7 +2819,7 @@
 
                 this.obstacles.push(new Obstacle(this.canvasCtx, obstacleType,
                     obstacleSpritePos, this.dimensions,
-                    this.gapCoefficient, currentSpeed, obstacleType.width));
+                    this.gapCoefficient, currentSpeed, obstacleType.width, false));
 
                 this.obstacleHistory.unshift(obstacleType.type);
 
@@ -2742,6 +2872,42 @@
                 this.dimensions.WIDTH));
         }
     };
+
+    /**
+     * Check for a collision between a projectile and obstacles.
+     * @param {Object} projectile
+     * @param {Array<Obstacle>} obstacles
+     * @return {boolean} Whether there was a collision.
+     */
+    function checkForProjectileCollision(projectile, obstacles) {
+        // Create simple box for projectile
+        var projectileBox = new CollisionBox(
+            projectile.x,
+            projectile.y, 
+            projectile.width,
+            projectile.height
+        );
+
+        // Check each obstacle
+        for (var i = 0; i < obstacles.length; i++) {
+            var obstacle = obstacles[i];
+            if (!obstacle.inactive) {
+                var obstacleBox = new CollisionBox(
+                    obstacle.xPos + 1,
+                    obstacle.yPos + 1,
+                    obstacle.width - 2,
+                    obstacle.typeConfig.height - 2
+                );
+
+                if (boxCompare(projectileBox, obstacleBox)) {
+                    obstacle.inactive = true;
+                    obstacle.hitByWater = projectile.type === 'water';
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 })();
 
 
