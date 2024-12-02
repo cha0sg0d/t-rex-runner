@@ -22,6 +22,7 @@ class Runner {
     this.horizon.addCloud();
 
     this.dino = new Dino(this.canvas, this.ctx, this.spriteSheet);
+    this.horizon.dino = this.dino;
 
     this.gameLoop();
   }
@@ -49,7 +50,10 @@ class Dino {
       GROUND_OFFSET: 12,
       RUN_ANIMATION_RATE: 6,
       JUMP_SPEED: -10,
-      GRAVITY: 0.6
+      GRAVITY: 0.6,
+      BULLET_SPEED: 7,
+      BULLET_WIDTH: 13,
+      BULLET_HEIGHT: 7 
     };
   
     constructor(canvas, ctx, spriteSheet) {
@@ -62,10 +66,14 @@ class Dino {
       this.currentSprite = 'STANDING';
       this.velocityY = 0;
       this.isJumping = false;
+      this.bullets = [];
       
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && !this.isJumping) {
           this.jump();
+        }
+        if (e.code === 'KeyW') {
+          this.shoot();
         }
       });
     }
@@ -112,12 +120,29 @@ class Dino {
         }
       }
 
+      // Update and draw bullets
+      this.bullets.forEach(bullet => {
+        bullet.update(Dino.config.BULLET_SPEED);
+        bullet.draw(this.ctx);
+      });
+
       this.draw();
     }
 
     jump() {
       this.isJumping = true;
       this.velocityY = Dino.config.JUMP_SPEED;
+    }
+
+    shoot() {
+      this.bullets.push(new Bullet(
+        this.canvas,
+        this.ctx,
+        this.xPos + Dino.config.WIDTH,
+        this.yPos + Dino.config.HEIGHT / 2,
+        Dino.config.BULLET_WIDTH,
+        Dino.config.BULLET_HEIGHT
+      ));
     }
   }
 
@@ -322,11 +347,34 @@ class Horizon {
     this.obstacles.push(new Obstacle(this.canvas, this.ctx, this.spriteSheet));
   }
 
+  checkCollisions() {
+    this.dino.bullets.forEach(bullet => {
+      this.obstacles.forEach(obstacle => {
+        if (this.isColliding(bullet, obstacle)) {
+          bullet.remove = true;
+          obstacle.remove = true;
+        }
+      });
+    });
+    
+    // Clean up removed bullets and obstacles
+    this.dino.bullets = this.dino.bullets.filter(bullet => !bullet.remove);
+    this.obstacles = this.obstacles.filter(obstacle => !obstacle.remove);
+  }
+
+  isColliding(bullet, obstacle) {
+    return bullet.x < obstacle.xPos + obstacle.width &&
+           bullet.x + bullet.width > obstacle.xPos &&
+           bullet.y < obstacle.yPos + obstacle.height &&
+           bullet.y + bullet.height > obstacle.yPos;
+  }
+
   update() {
     const speed = 2;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
     this.horizonLine.update(speed);
+    this.checkCollisions();
     
     // Remove clouds and obstacles that are marked for removal
     this.clouds = this.clouds.filter(cloud => !cloud.remove);
@@ -359,7 +407,29 @@ class Horizon {
   }
 }
 
+class Bullet {
+  constructor(canvas, ctx, x, y, width, height) {
+    this.canvas = canvas;
+    this.ctx = ctx;
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.remove = false;
+  }
 
+  update(speed) {
+    if (!this.remove) {
+      this.x += speed;
+      return this.x < this.canvas.width;
+    }
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = '#00f';
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+}
 
 // Initialize game
 window.onload = () => {
