@@ -466,7 +466,7 @@ class Horizon {
           bullet.remove = true;
           obstacle.isHit = true;
           const text = '+2'
-          this.dino.runner.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text, '#2ecc71'));
+          this.dino.runner.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text, '#2ecc71', 2));
           this.dino.leafCount += Dino.config.BASE_LEAF_REWARD;
         }
       });
