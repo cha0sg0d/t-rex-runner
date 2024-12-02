@@ -366,10 +366,15 @@ class Obstacle {
       this.yPos = this.canvas.height - this.height - 12; // 12 is ground height
       this.remove = false;
       this.speed = Obstacle.config.MIN_SPEED;
+      this.isHit = false;
     }
   
     draw() {
       this.ctx.save();
+      
+      if (this.isHit) {
+        this.ctx.globalAlpha = 0.3;
+      }
       
       // Draw each cactus in the group
       for (let i = 0; i < this.size; i++) {
@@ -457,9 +462,9 @@ class Horizon {
   checkCollisions() {
     this.dino.bullets.forEach(bullet => {
       this.obstacles.forEach(obstacle => {
-        if (this.isColliding(bullet, obstacle)) {
+        if (!obstacle.isHit && this.isColliding(bullet, obstacle)) {
           bullet.remove = true;
-          obstacle.remove = true;
+          obstacle.isHit = true;
           const text = '+2'
           this.dino.runner.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text, '#2ecc71'));
           this.dino.leafCount += Dino.config.BASE_LEAF_REWARD;
