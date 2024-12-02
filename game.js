@@ -251,75 +251,6 @@ class Dino {
   }
 }
 
-class Cloud {
-  static config = {
-    HEIGHT: 14,
-    WIDTH: 46,
-    SPRITE_X: 86,
-    SPRITE_Y: 2,
-    MIN_SPEED: 1,
-    MAX_SPEED: 3,
-    MIN_Y: 10,
-    MAX_Y: 80,
-  };
-
-  constructor(canvas, ctx, spriteSheet) {
-    this.canvas = canvas;
-    this.ctx = ctx;
-    this.spriteSheet = spriteSheet;
-    this.xPos = this.canvas.width;
-    this.yPos = getRandomNum(Cloud.config.MIN_Y, Cloud.config.MAX_Y);
-    this.remove = false;
-    this.speed =
-      getRandomNum(Cloud.config.MIN_SPEED, Cloud.config.MAX_SPEED) / 2;
-    this.isTouched = false;
-  }
-
-  draw() {
-    this.ctx.save();
-
-    // Draw highlight if cloud is highlighted
-    if (this.isTouched) {
-      this.ctx.globalAlpha = 0.1;
-      this.ctx.fillStyle = colors.BLUE;
-      this.ctx.fillRect(
-        this.xPos,
-        this.yPos,
-        Cloud.config.WIDTH,
-        Cloud.config.HEIGHT
-      );
-    }
-
-    this.ctx.drawImage(
-      this.spriteSheet,
-      Cloud.config.SPRITE_X,
-      Cloud.config.SPRITE_Y,
-      Cloud.config.WIDTH,
-      Cloud.config.HEIGHT,
-      this.xPos,
-      this.yPos,
-      Cloud.config.WIDTH,
-      Cloud.config.HEIGHT
-    );
-    this.ctx.restore();
-  }
-
-  update() {
-    if (!this.remove) {
-      this.xPos -= this.speed;
-      this.draw();
-
-      if (!this.isVisible()) {
-        this.remove = true;
-      }
-    }
-  }
-
-  isVisible() {
-    return this.xPos + Cloud.config.WIDTH > 0;
-  }
-}
-
 class HorizonLine {
   static config = {
     SPRITE_X: 2,
@@ -389,31 +320,54 @@ class Obstacle {
       SPRITE_Y: 2,
       Y_POS: 90,
     },
+    CLOUD: {
+      WIDTH: 46,
+      HEIGHT: 14,
+      SPRITE_X: 86,
+      SPRITE_Y: 2,
+      MIN_Y: 30,
+      MAX_Y: 100,
+    },
+    GAS: {
+      WIDTH: 47,
+      HEIGHT: 23,
+      SPRITE_X: 1233,
+      SPRITE_Y: 11,
+    },
     MAX_OBSTACLE_LENGTH: 3,
     MIN_SPEED: 2,
     SPEED_OFFSET: 0.8,
   };
 
-  constructor(canvas, ctx, spriteSheet) {
+  constructor(canvas, ctx, spriteSheet, type) {
     this.canvas = canvas;
     this.ctx = ctx;
     this.spriteSheet = spriteSheet;
-    this.size =
-      Math.floor(Math.random() * Obstacle.config.MAX_OBSTACLE_LENGTH) + 1;
+    this.size = 1;
+    this.type = type;
+    this.item = Obstacle.config[type];
+    console.log(`SPAWNING ${type}`, this.item);
 
-    // Randomly choose between small and large cactus
-    this.type =
-      Math.random() > 0.5
-        ? Obstacle.config.CACTUS_SMALL
-        : Obstacle.config.CACTUS_LARGE;
+    // // Randomly choose between small and large cactus
+    // this.type =
+    //   Math.random() > 0.5
+    //     ? Obstacle.config.CACTUS_SMALL
+    //     : Obstacle.config.CACTUS_LARGE;
 
-    this.width = this.type.WIDTH * this.size;
-    this.height = this.type.HEIGHT;
+    this.width = this.item.WIDTH * this.size;
+    this.height = this.item.HEIGHT;
     this.xPos = this.canvas.width;
     this.yPos = this.canvas.height - this.height - 12; // 12 is ground height
     this.remove = false;
     this.speed = Obstacle.config.MIN_SPEED;
     this.isHit = false;
+
+    if (type === "CLOUD") {
+      this.yPos = getRandomNum(
+        Obstacle.config.CLOUD.MIN_Y,
+        Obstacle.config.CLOUD.MAX_Y
+      );
+    }
   }
 
   draw() {
@@ -427,14 +381,14 @@ class Obstacle {
     for (let i = 0; i < this.size; i++) {
       this.ctx.drawImage(
         this.spriteSheet,
-        this.type.SPRITE_X,
-        this.type.SPRITE_Y,
-        this.type.WIDTH,
-        this.type.HEIGHT,
-        this.xPos + i * this.type.WIDTH,
+        this.item.SPRITE_X,
+        this.item.SPRITE_Y,
+        this.item.WIDTH,
+        this.item.HEIGHT,
+        this.xPos + i * this.item.WIDTH,
         this.yPos,
-        this.type.WIDTH,
-        this.type.HEIGHT
+        this.item.WIDTH,
+        this.item.HEIGHT
       );
     }
 
@@ -501,23 +455,31 @@ class Horizon {
   }
 
   addCloud() {
-    this.clouds.push(new Cloud(this.canvas, this.ctx, this.spriteSheet));
+    this.obstacles.push(
+      new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
+    );
   }
 
   addObstacle() {
-    this.obstacles.push(new Obstacle(this.canvas, this.ctx, this.spriteSheet));
+    this.obstacles.push(
+      new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS_SMALL")
+    );
   }
 
   addGas() {
-    this.gases.push(
-      new Gas(this.canvas, this.ctx, this.spriteSheet, this.runner.speed)
+    this.obstacles.push(
+      new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
     );
   }
 
   checkCollisions() {
     this.dino.bullets.forEach((bullet) => {
       this.obstacles.forEach((obstacle) => {
-        if (!obstacle.isHit && this.isColliding(bullet, obstacle)) {
+        if (
+          !obstacle.isHit &&
+          obstacle.type.includes("CACTUS") &&
+          this.isColliding(bullet, obstacle)
+        ) {
           bullet.remove = true;
           obstacle.isHit = true;
           const text = "+2";
@@ -542,43 +504,40 @@ class Horizon {
     this.dino.bullets = this.dino.bullets.filter((bullet) => !bullet.remove);
     this.obstacles = this.obstacles.filter((obstacle) => !obstacle.remove);
 
-    // Add cloud collision detection
-    this.clouds.forEach((cloud) => {
-      if (!cloud.isTouched && this.isCollidingWithDino(cloud)) {
-        cloud.isTouched = true;
-        const text = "+2";
-        const waterText = new FloatingText(
-          cloud.xPos,
-          cloud.yPos,
-          text,
-          colors.BLUE
-        );
-        this.runner.floatingTexts.push(waterText);
-        this.dino.waterAmmoCount = Math.min(
-          this.dino.waterAmmoCount + 2,
-          this.dino.maxWaterAmmo
-        );
-      }
-    });
-
-    // Add gas collision detection
-    this.gases.forEach((gas) => {
-      if (!gas.isTouched && this.isCollidingWithDino(gas)) {
-        gas.isTouched = true;
-        gas.remove = true;
-        const text = "+2";
-        const gasText = new FloatingText(
-          gas.xPos,
-          gas.yPos,
-          text,
-          colors.RED,
-          this.runner.speed - 1
-        );
-        this.runner.floatingTexts.push(gasText);
-        this.dino.gasCount = Math.min(
-          this.dino.gasCount + 2,
-          this.dino.maxGasCount
-        );
+    this.obstacles.forEach((obstacle) => {
+      const isColliding = this.isCollidingWithDino(obstacle);
+      if (!obstacle.isHit && isColliding) {
+        obstacle.isHit = true;
+        console.log("COLLISION", obstacle.type);
+        if (obstacle.type === "CLOUD") {
+          const text = "+2";
+          const waterText = new FloatingText(
+            obstacle.xPos,
+            obstacle.yPos,
+            text,
+            colors.BLUE
+          );
+          this.runner.floatingTexts.push(waterText);
+          this.dino.waterAmmoCount = Math.min(
+            this.dino.waterAmmoCount + 2,
+            this.dino.maxWaterAmmo
+          );
+        } else if (obstacle.type === "GAS") {
+          obstacle.remove = true;
+          const text = "+2";
+          const gasText = new FloatingText(
+            obstacle.xPos,
+            obstacle.yPos,
+            text,
+            colors.RED,
+            this.runner.speed - 1
+          );
+          this.runner.floatingTexts.push(gasText);
+          this.dino.gasCount = Math.min(
+            this.dino.gasCount + 2,
+            this.dino.maxGasCount
+          );
+        }
       }
     });
   }
@@ -594,9 +553,9 @@ class Horizon {
 
   isCollidingWithDino(entity) {
     return (
-      this.dino.xPos < entity.xPos + entity.constructor.config.WIDTH &&
+      this.dino.xPos < entity.xPos + entity.width &&
       this.dino.xPos + Dino.config.WIDTH > entity.xPos &&
-      this.dino.yPos < entity.yPos + entity.constructor.config.HEIGHT &&
+      this.dino.yPos < entity.yPos + entity.height &&
       this.dino.yPos + Dino.config.HEIGHT > entity.yPos
     );
   }
@@ -671,63 +630,6 @@ class Bullet {
   draw(ctx) {
     ctx.fillStyle = this.type === "water" ? colors.BLUE : colors.RED;
     ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-}
-
-// Add this new class
-class Gas {
-  static config = {
-    HEIGHT: 23,
-    WIDTH: 47,
-    MIN_SPEED: 1,
-    MAX_SPEED: 3,
-    MIN_Y: 30,
-    MAX_Y: 100,
-    SPRITE_X: 1233,
-    SPRITE_Y: 11,
-  };
-
-  constructor(canvas, ctx, spriteSheet, speed) {
-    this.canvas = canvas;
-    this.ctx = ctx;
-    this.spriteSheet = spriteSheet;
-    this.xPos = this.canvas.width;
-    this.yPos = this.canvas.height - Gas.config.HEIGHT - 12;
-    this.remove = false;
-    this.speed = speed;
-    this.isTouched = false;
-  }
-
-  draw() {
-    this.ctx.save();
-    this.ctx.drawImage(
-      this.spriteSheet,
-      Gas.config.SPRITE_X,
-      Gas.config.SPRITE_Y,
-      Gas.config.WIDTH,
-      Gas.config.HEIGHT,
-      this.xPos,
-      this.yPos,
-      Gas.config.WIDTH,
-      Gas.config.HEIGHT
-    );
-    this.ctx.restore();
-  }
-
-  update() {
-    if (!this.remove) {
-      this.xPos -= this.speed;
-      this.opacity = Math.max(0, this.opacity - 0.005); // Slowly fade out
-      this.draw();
-
-      if (!this.isVisible() || this.opacity <= 0) {
-        this.remove = true;
-      }
-    }
-  }
-
-  isVisible() {
-    return this.xPos + Gas.config.WIDTH > 0;
   }
 }
 
