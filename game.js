@@ -116,6 +116,7 @@ class Dino {
     BULLET_WIDTH: 13,
     BULLET_HEIGHT: 7,
     BASE_LEAF_REWARD: 2,
+    BASE_$_REWARD: 2,
   };
 
   constructor(canvas, ctx, spriteSheet) {
@@ -129,10 +130,10 @@ class Dino {
     this.velocityY = 0;
     this.isJumping = false;
     this.bullets = [];
-    this.waterAmmoCount = 10;
     this.maxWaterAmmo = 10;
-    this.gasCount = 0;
     this.maxGasCount = 10;
+    this.waterAmmoCount = this.maxWaterAmmo;
+    this.gasCount = this.maxGasCount;
     this.leafCount = 0;
 
     document.addEventListener("keydown", (e) => {
@@ -140,7 +141,10 @@ class Dino {
         this.jump();
       }
       if (e.code === "KeyW") {
-        this.shoot();
+        this.shoot("water");
+      }
+      if (e.code === "KeyE") {
+        this.shoot("fire");
       }
     });
   }
@@ -202,28 +206,32 @@ class Dino {
     this.velocityY = Dino.config.JUMP_SPEED;
   }
 
-  shoot() {
-    if (this.waterAmmoCount > 0) {
-      this.bullets.push(
-        new Bullet(
-          this.canvas,
-          this.ctx,
-          this.xPos + Dino.config.WIDTH,
-          this.yPos + Dino.config.HEIGHT / 2,
-          Dino.config.BULLET_WIDTH,
-          Dino.config.BULLET_HEIGHT
-        )
-      );
+  shoot(type = "water") {
+    const bullet = new Bullet(
+      this.canvas,
+      this.ctx,
+      this.xPos + Dino.config.WIDTH,
+      this.yPos + Dino.config.HEIGHT / 2,
+      Dino.config.BULLET_WIDTH,
+      Dino.config.BULLET_HEIGHT,
+      type
+    );
+    if (type === "water" && this.waterAmmoCount > 0) {
+      this.bullets.push(bullet);
       this.waterAmmoCount--;
+    } else if (type === "fire" && this.gasCount > 0) {
+      this.bullets.push(bullet);
+      this.gasCount--;
     } else {
-      // Optional: Show "Out of ammo" floating text
+      // Show "Out of ammo" floating text
       if (this.runner) {
+        const ammoType = type === "water" ? "💧" : "⛽️";
         this.runner.floatingTexts.push(
           new FloatingText(
             this.xPos + Dino.config.WIDTH,
             this.yPos,
-            "No 💧",
-            "#e74c3c"
+            `No ${ammoType}`,
+            colors.RED
           )
         );
       }
@@ -620,7 +628,7 @@ class Horizon {
 }
 
 class Bullet {
-  constructor(canvas, ctx, x, y, width, height) {
+  constructor(canvas, ctx, x, y, width, height, type = "water") {
     this.canvas = canvas;
     this.ctx = ctx;
     this.x = x;
@@ -628,6 +636,7 @@ class Bullet {
     this.width = width;
     this.height = height;
     this.remove = false;
+    this.type = type;
   }
 
   update(speed) {
@@ -638,7 +647,7 @@ class Bullet {
   }
 
   draw(ctx) {
-    ctx.fillStyle = "#3498db";
+    ctx.fillStyle = this.type === "water" ? colors.BLUE : colors.RED;
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 }
