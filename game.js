@@ -41,9 +41,13 @@ class Dino {
     static config = {
       WIDTH: 44,
       HEIGHT: 47,
-      SPRITE_X: 848,
-      SPRITE_Y: 2,
-      GROUND_OFFSET: 12  // Distance from bottom of canvas
+      SPRITE_POSITIONS: {
+        STANDING: { x: 848, y: 2 },
+        RUNNING_1: { x: 936, y: 2 },
+        RUNNING_2: { x: 980, y: 2 }
+      },
+      GROUND_OFFSET: 12,
+      RUN_ANIMATION_RATE: 6
     };
   
     constructor(canvas, ctx, spriteSheet) {
@@ -52,14 +56,17 @@ class Dino {
       this.spriteSheet = spriteSheet;
       this.xPos = 0;
       this.yPos = canvas.height - Dino.config.HEIGHT - Dino.config.GROUND_OFFSET;
+      this.frameCount = 0;
+      this.currentSprite = 'STANDING';
     }
   
     draw() {
+      const sprite = Dino.config.SPRITE_POSITIONS[this.currentSprite];
       this.ctx.save();
       this.ctx.drawImage(
         this.spriteSheet,
-        Dino.config.SPRITE_X,
-        Dino.config.SPRITE_Y,
+        sprite.x,
+        sprite.y,
         Dino.config.WIDTH,
         Dino.config.HEIGHT,
         this.xPos,
@@ -71,6 +78,15 @@ class Dino {
     }
   
     update() {
+      this.frameCount++;
+      if (this.frameCount >= Dino.config.RUN_ANIMATION_RATE) {
+        this.frameCount = 0;
+        if (this.currentSprite === 'RUNNING_1') {
+          this.currentSprite = 'RUNNING_2';
+        } else {
+          this.currentSprite = 'RUNNING_1';
+        }
+      }
       this.draw();
     }
   }
