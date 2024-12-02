@@ -449,6 +449,8 @@ class Horizon {
     this.cloudSpawnTimer = 0;
     this.obstacles = [];
     this.obstacleSpawnTimer = 0;
+    this.gases = [];
+    this.gasSpawnTimer = 0;
   }
 
   addCloud() {
@@ -457,6 +459,10 @@ class Horizon {
 
   addObstacle() {
     this.obstacles.push(new Obstacle(this.canvas, this.ctx, this.spriteSheet));
+  }
+
+  addGas() {
+    this.gases.push(new Gas(this.canvas, this.ctx, this.spriteSheet, this.runner.speed));
   }
 
   checkCollisions() {
@@ -526,14 +532,24 @@ class Horizon {
       this.obstacleSpawnTimer = 0;
     }
     
+    // Manage gas clouds
+    this.gases = this.gases.filter(gas => !gas.remove);
+    this.gasSpawnTimer++;
+    if (this.gasSpawnTimer > getRandomNum(100, 200)) {
+      this.addGas();
+      this.gasSpawnTimer = 0;
+    }
+    
     this.clouds.forEach(cloud => cloud.update());
     this.obstacles.forEach(obstacle => obstacle.update());
+    this.gases.forEach(gas => gas.update());
     
     this.draw();
   }
 
   draw() {
     this.clouds.forEach(cloud => cloud.draw());
+    this.gases.forEach(gas => gas.draw());  // Draw gases before obstacles
     this.obstacles.forEach(obstacle => obstacle.draw());
     this.horizonLine.draw();
   }
@@ -560,6 +576,53 @@ class Bullet {
   draw(ctx) {
     ctx.fillStyle = '#3498db';
     ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+}
+
+// Add this new class
+class Gas {
+  static config = {
+    HEIGHT: 23,
+    WIDTH: 47,
+    MIN_SPEED: 1,
+    MAX_SPEED: 3,
+    MIN_Y: 30,
+    MAX_Y: 100,
+    SPRITE_X: 1233,
+    SPRITE_Y: 11,
+  };
+
+  constructor(canvas, ctx, spriteSheet, speed) {
+    this.canvas = canvas;
+    this.ctx = ctx;
+    this.spriteSheet = spriteSheet;
+    this.xPos = this.canvas.width;
+    this.yPos = this.canvas.height - Gas.config.HEIGHT - 12;
+    this.remove = false;
+    this.speed = speed;
+    this.isTouched = false;
+  }
+
+  draw() {
+    this.ctx.save();
+    this.ctx.drawImage(this.spriteSheet, Gas.config.SPRITE_X, Gas.config.SPRITE_Y, Gas.config.WIDTH, Gas.config.HEIGHT, this.xPos, this.yPos, Gas.config.WIDTH, Gas.config.HEIGHT);
+    this.ctx.restore();
+  }
+
+  update() {
+    if (!this.remove) {
+      this.xPos -= this.speed;
+      this.opacity = Math.max(0, this.opacity - 0.005); // Slowly fade out
+      this.draw();
+
+      if (!this.isVisible() || this.opacity <= 0) {
+        this.remove = true;
+      }
+    }
+  }
+
+  isVisible() {
+    return this.xPos + Gas.config.WIDTH > 0;
   }
 }
 
