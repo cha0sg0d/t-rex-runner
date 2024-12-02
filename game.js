@@ -47,7 +47,9 @@ class Dino {
         RUNNING_2: { x: 980, y: 2 }
       },
       GROUND_OFFSET: 12,
-      RUN_ANIMATION_RATE: 6
+      RUN_ANIMATION_RATE: 6,
+      JUMP_SPEED: -10,
+      GRAVITY: 0.6
     };
   
     constructor(canvas, ctx, spriteSheet) {
@@ -58,6 +60,14 @@ class Dino {
       this.yPos = canvas.height - Dino.config.HEIGHT - Dino.config.GROUND_OFFSET;
       this.frameCount = 0;
       this.currentSprite = 'STANDING';
+      this.velocityY = 0;
+      this.isJumping = false;
+      
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !this.isJumping) {
+          this.jump();
+        }
+      });
     }
   
     draw() {
@@ -78,16 +88,36 @@ class Dino {
     }
   
     update() {
-      this.frameCount++;
-      if (this.frameCount >= Dino.config.RUN_ANIMATION_RATE) {
-        this.frameCount = 0;
-        if (this.currentSprite === 'RUNNING_1') {
-          this.currentSprite = 'RUNNING_2';
-        } else {
-          this.currentSprite = 'RUNNING_1';
+      if (this.isJumping) {
+        this.yPos += this.velocityY;
+        this.velocityY += Dino.config.GRAVITY;
+
+        const groundY = this.canvas.height - Dino.config.HEIGHT - Dino.config.GROUND_OFFSET;
+        if (this.yPos >= groundY) {
+          this.yPos = groundY;
+          this.velocityY = 0;
+          this.isJumping = false;
         }
       }
+
+      if (!this.isJumping) {
+        this.frameCount++;
+        if (this.frameCount >= Dino.config.RUN_ANIMATION_RATE) {
+          this.frameCount = 0;
+          if (this.currentSprite === 'RUNNING_1') {
+            this.currentSprite = 'RUNNING_2';
+          } else {
+            this.currentSprite = 'RUNNING_1';
+          }
+        }
+      }
+
       this.draw();
+    }
+
+    jump() {
+      this.isJumping = true;
+      this.velocityY = Dino.config.JUMP_SPEED;
     }
   }
 
