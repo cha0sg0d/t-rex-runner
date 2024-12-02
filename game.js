@@ -18,10 +18,13 @@ class Runner {
     // Add white outline to canvas
     this.canvas.style.border = '2px solid black';
 
+    this.floatingTexts = [];
     this.horizon = new Horizon(this.canvas, this.ctx, this.spriteSheet);
     this.horizon.addCloud();
 
+    this.speed = 2; 
     this.dino = new Dino(this.canvas, this.ctx, this.spriteSheet);
+    this.dino.runner = this;
     this.horizon.dino = this.dino;
 
     this.gameLoop();
@@ -29,9 +32,14 @@ class Runner {
   }
 
   update() {
+    this.floatingTexts = this.floatingTexts.filter(text => !text.remove);
+    this.floatingTexts.forEach(text => text.update());
+
     this.horizon.update();
     this.dino.update();
     this.drawInfo();
+
+    this.floatingTexts.forEach(text => text.draw(this.ctx));
   }
 
   gameLoop() {
@@ -169,15 +177,29 @@ class Dino {
     }
 
     shoot() {
-      this.bullets.push(new Bullet(
-        this.canvas,
-        this.ctx,
-        this.xPos + Dino.config.WIDTH,
-        this.yPos + Dino.config.HEIGHT / 2,
-        Dino.config.BULLET_WIDTH,
-        Dino.config.BULLET_HEIGHT
-      ));
-      this.bulletsFired++;
+      if (this.bulletsFired < this.maxWaterAmmo) {
+        this.bullets.push(new Bullet(
+          this.canvas,
+          this.ctx,
+          this.xPos + Dino.config.WIDTH,
+          this.yPos + Dino.config.HEIGHT / 2,
+          Dino.config.BULLET_WIDTH,
+          Dino.config.BULLET_HEIGHT
+        ));
+        this.bulletsFired++;
+      } else {
+        // Optional: Show "Out of ammo" floating text
+        if (this.runner) {
+          this.runner.floatingTexts.push(
+            new FloatingText(
+              this.xPos + Dino.config.WIDTH,
+              this.yPos,
+              "No 💧",
+              '#e74c3c'
+            )
+          );
+        }
+      }
     }
   }
 
@@ -363,17 +385,18 @@ class Obstacle {
   }
 
 class FloatingText {
-  constructor(x, y, text, color) {
+  constructor(x, y, text, color, speed = 0) {
     this.x = x;
     this.y = y;
     this.text = text;
     this.color = color;
     this.lifetime = 30;
     this.remove = false;
+    this.speed = speed;
   }
 
-  update(speed) {
-    this.x -= speed;
+  update(speed = 0) {
+    this.x -= speed || this.speed;
     this.y -= 1;
     this.lifetime--;
     if (this.lifetime <= 0) {
@@ -400,7 +423,6 @@ class Horizon {
     this.cloudSpawnTimer = 0;
     this.obstacles = [];
     this.obstacleSpawnTimer = 0;
-    this.floatingTexts = [];
   }
 
   addCloud() {
@@ -418,16 +440,14 @@ class Horizon {
           bullet.remove = true;
           obstacle.remove = true;
           const text = '+2'
-          this.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text, '#2ecc71'));
+          this.dino.runner.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text, '#2ecc71'));
           this.dino.leafCount += Dino.config.BASE_LEAF_REWARD;
         }
       });
     });
     
-    // Clean up removed bullets, obstacles, and texts
     this.dino.bullets = this.dino.bullets.filter(bullet => !bullet.remove);
     this.obstacles = this.obstacles.filter(obstacle => !obstacle.remove);
-    this.floatingTexts = this.floatingTexts.filter(text => !text.remove);
   }
 
   isColliding(bullet, obstacle) {
@@ -465,8 +485,6 @@ class Horizon {
     this.clouds.forEach(cloud => cloud.update());
     this.obstacles.forEach(obstacle => obstacle.update());
     
-    this.floatingTexts.forEach(text => text.update(speed));
-    
     this.draw();
   }
 
@@ -474,7 +492,6 @@ class Horizon {
     this.clouds.forEach(cloud => cloud.draw());
     this.obstacles.forEach(obstacle => obstacle.draw());
     this.horizonLine.draw();
-    this.floatingTexts.forEach(text => text.draw(this.ctx));
   }
 }
 
