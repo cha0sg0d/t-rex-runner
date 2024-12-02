@@ -43,7 +43,7 @@ class Cloud {
     MIN_SPEED: 1,
     MAX_SPEED: 3,
     MIN_Y: 10,
-    MAX_Y: 50
+    MAX_Y: 80
   };
 
   constructor(canvas, ctx, spriteSheet) {
@@ -64,8 +64,8 @@ class Cloud {
         Cloud.config.SPRITE_Y,
         Cloud.config.WIDTH,
         Cloud.config.HEIGHT,
-        this.xPos - 100,
-        this.yPos + 50,
+        this.xPos,
+        this.yPos,
         Cloud.config.WIDTH,
         Cloud.config.HEIGHT
       );    
@@ -137,7 +137,83 @@ class HorizonLine {
             this.xPos = 0;
         }
     }
+
 }
+
+class Obstacle {
+    static config = {
+      CACTUS_SMALL: {
+        WIDTH: 17,
+        HEIGHT: 35,
+        SPRITE_X: 228,
+        SPRITE_Y: 2,
+        Y_POS: 105
+      },
+      CACTUS_LARGE: {
+        WIDTH: 25,
+        HEIGHT: 50,
+        SPRITE_X: 332,
+        SPRITE_Y: 2,
+        Y_POS: 90
+      },
+      MAX_OBSTACLE_LENGTH: 3,
+      MIN_SPEED: 2,
+      SPEED_OFFSET: 0.8
+    };
+  
+    constructor(canvas, ctx, spriteSheet) {
+      this.canvas = canvas;
+      this.ctx = ctx;
+      this.spriteSheet = spriteSheet;
+      this.size = Math.floor(Math.random() * Obstacle.config.MAX_OBSTACLE_LENGTH) + 1;
+      
+      // Randomly choose between small and large cactus
+      this.type = Math.random() > 0.5 ? Obstacle.config.CACTUS_SMALL : Obstacle.config.CACTUS_LARGE;
+      
+      this.width = this.type.WIDTH * this.size;
+      this.height = this.type.HEIGHT;
+      this.xPos = this.canvas.width;
+      this.yPos = this.canvas.height - this.height - 12; // 12 is ground height
+      this.remove = false;
+      this.speed = Obstacle.config.MIN_SPEED;
+    }
+  
+    draw() {
+      this.ctx.save();
+      
+      // Draw each cactus in the group
+      for (let i = 0; i < this.size; i++) {
+        this.ctx.drawImage(
+          this.spriteSheet,
+          this.type.SPRITE_X,
+          this.type.SPRITE_Y,
+          this.type.WIDTH,
+          this.type.HEIGHT,
+          this.xPos + (i * this.type.WIDTH),
+          this.yPos,
+          this.type.WIDTH,
+          this.type.HEIGHT
+        );
+      }
+      
+      this.ctx.restore();
+    }
+  
+    update() {
+      if (!this.remove) {
+        this.xPos -= this.speed;
+        this.draw();
+  
+        if (!this.isVisible()) {
+          this.remove = true;
+        }
+      }
+    }
+  
+    isVisible() {
+      return this.xPos + this.width > 0;
+    }
+  }
 
 class Horizon {
   constructor(canvas, ctx, spriteSheet) {
@@ -147,10 +223,16 @@ class Horizon {
     this.clouds = [];
     this.horizonLine = new HorizonLine(this.canvas, this.ctx, this.spriteSheet);
     this.cloudSpawnTimer = 0;
+    this.obstacles = [];
+    this.obstacleSpawnTimer = 0;
   }
 
   addCloud() {
     this.clouds.push(new Cloud(this.canvas, this.ctx, this.spriteSheet));
+  }
+
+  addObstacle() {
+    this.obstacles.push(new Obstacle(this.canvas, this.ctx, this.spriteSheet));
   }
 
   update() {
@@ -159,8 +241,9 @@ class Horizon {
     
     this.horizonLine.update(speed);
     
-    // Remove clouds that are marked for removal
+    // Remove clouds and obstacles that are marked for removal
     this.clouds = this.clouds.filter(cloud => !cloud.remove);
+    this.obstacles = this.obstacles.filter(obstacle => !obstacle.remove);
     
     // Randomly spawn new clouds
     this.cloudSpawnTimer++;
@@ -168,20 +251,27 @@ class Horizon {
       this.addCloud();
       this.cloudSpawnTimer = 0;
     }
+
+    // Randomly spawn new obstacles
+    this.obstacleSpawnTimer++;
+    if (this.obstacleSpawnTimer > getRandomNum(150, 300)) {
+      this.addObstacle();
+      this.obstacleSpawnTimer = 0;
+    }
     
-    this.clouds.forEach(cloud => {
-      cloud.update();
-    });
+    this.clouds.forEach(cloud => cloud.update());
+    this.obstacles.forEach(obstacle => obstacle.update());
+    
     this.draw();
   }
 
   draw() {
-    this.clouds.forEach(cloud => {
-      cloud.draw();
-    });
+    this.clouds.forEach(cloud => cloud.draw());
+    this.obstacles.forEach(obstacle => obstacle.draw());
     this.horizonLine.draw();
   }
 }
+
 
 
 // Initialize game
