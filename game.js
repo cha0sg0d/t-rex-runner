@@ -1,4 +1,3 @@
-
 // Utilities
 function getRandomNum(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -40,7 +39,11 @@ class Cloud {
     HEIGHT: 14,
     WIDTH: 46,
     SPRITE_X: 86,
-    SPRITE_Y: 2
+    SPRITE_Y: 2,
+    MIN_SPEED: 1,
+    MAX_SPEED: 3,
+    MIN_Y: 10,
+    MAX_Y: 50
   };
 
   constructor(canvas, ctx, spriteSheet) {
@@ -48,12 +51,10 @@ class Cloud {
     this.ctx = ctx;
     this.spriteSheet = spriteSheet;
     this.xPos = this.canvas.width;
-    this.yPos = 0;
+    this.yPos = getRandomNum(Cloud.config.MIN_Y, Cloud.config.MAX_Y);
     this.remove = false;
-    
+    this.speed = getRandomNum(Cloud.config.MIN_SPEED, Cloud.config.MAX_SPEED) / 2;
   }
-
-
 
   draw() {
     this.ctx.save();
@@ -71,9 +72,9 @@ class Cloud {
     this.ctx.restore();
   }
 
-  update(speed) {
+  update() {
     if (!this.remove) {
-      this.xPos -= Math.ceil(speed);
+      this.xPos -= this.speed;
       this.draw();
 
       if (!this.isVisible()) {
@@ -98,23 +99,43 @@ class HorizonLine {
         this.canvas = canvas;
         this.ctx = ctx;
         this.spriteSheet = spriteSheet;
-        this.yPos = canvas.height - 24
+        this.yPos = canvas.height - 24;
+        this.bumpyGround = true
+        this.xPos = 0;
     }
 
     draw() {
-     this.ctx.save();
-     this.ctx.drawImage(
-        this.spriteSheet,
-        HorizonLine.config.SPRITE_X,
-        HorizonLine.config.SPRITE_Y,
-        HorizonLine.config.WIDTH,
-        HorizonLine.config.HEIGHT,
-        0,
-        this.yPos,
-        HorizonLine.config.WIDTH,
-        HorizonLine.config.HEIGHT
-     )
-     this.ctx.restore();
+        this.ctx.save();
+        this.ctx.drawImage(
+            this.spriteSheet,
+            HorizonLine.config.SPRITE_X,
+            HorizonLine.config.SPRITE_Y,
+            HorizonLine.config.WIDTH + (this.bumpyGround ? HorizonLine.config.WIDTH : 0),
+            HorizonLine.config.HEIGHT,
+            this.xPos,
+            this.yPos,
+            HorizonLine.config.WIDTH,
+            HorizonLine.config.HEIGHT
+        );
+        this.ctx.drawImage(
+            this.spriteSheet,
+            HorizonLine.config.SPRITE_X,
+            HorizonLine.config.SPRITE_Y,
+            HorizonLine.config.WIDTH + (this.bumpyGround ? HorizonLine.config.WIDTH : 0),
+            HorizonLine.config.HEIGHT,
+            this.xPos + HorizonLine.config.WIDTH,
+            this.yPos,
+            HorizonLine.config.WIDTH,
+            HorizonLine.config.HEIGHT
+        );
+        this.ctx.restore();
+    }
+
+    update(speed) {
+        this.xPos -= speed;
+        if (this.xPos <= -HorizonLine.config.WIDTH) {
+            this.xPos = 0;
+        }
     }
 }
 
@@ -125,6 +146,7 @@ class Horizon {
     this.spriteSheet = spriteSheet;
     this.clouds = [];
     this.horizonLine = new HorizonLine(this.canvas, this.ctx, this.spriteSheet);
+    this.cloudSpawnTimer = 0;
   }
 
   addCloud() {
@@ -132,7 +154,25 @@ class Horizon {
   }
 
   update() {
-    this.draw()
+    const speed = 2;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    this.horizonLine.update(speed);
+    
+    // Remove clouds that are marked for removal
+    this.clouds = this.clouds.filter(cloud => !cloud.remove);
+    
+    // Randomly spawn new clouds
+    this.cloudSpawnTimer++;
+    if (this.cloudSpawnTimer > getRandomNum(150, 300)) {
+      this.addCloud();
+      this.cloudSpawnTimer = 0;
+    }
+    
+    this.clouds.forEach(cloud => {
+      cloud.update();
+    });
+    this.draw();
   }
 
   draw() {
