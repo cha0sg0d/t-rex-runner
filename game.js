@@ -3,6 +3,12 @@ function getRandomNum(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+const colors = {
+  BLUE: '#3498db',
+  GREEN: '#2ecc71',
+  RED: '#e74c3c'
+}
+
 class Runner {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -26,6 +32,7 @@ class Runner {
     this.dino = new Dino(this.canvas, this.ctx, this.spriteSheet);
     this.dino.runner = this;
     this.horizon.dino = this.dino;
+    this.horizon.runner = this;
 
     this.gameLoop();
     this.drawInfo();
@@ -62,7 +69,7 @@ class Runner {
     this.ctx.fillText('💧', startX, startY);
     
     this.ctx.font = '12px "Press Start 2P", monospace';
-    this.ctx.fillText(`${this.dino.maxWaterAmmo - this.dino.bulletsFired} / ${this.dino.maxWaterAmmo}`, startX + 25, startY);
+    this.ctx.fillText(`${this.dino.waterAmmoCount} / ${this.dino.maxWaterAmmo}`, startX + 25, startY);
 
     // Leaf counter
     this.ctx.fillStyle = '#2ecc71';
@@ -106,7 +113,7 @@ class Dino {
       this.velocityY = 0;
       this.isJumping = false;
       this.bullets = [];
-      this.bulletsFired = 0;
+      this.waterAmmoCount= 10;
       this.maxWaterAmmo = 10;
       this.leafCount = 0;
 
@@ -177,7 +184,7 @@ class Dino {
     }
 
     shoot() {
-      if (this.bulletsFired < this.maxWaterAmmo) {
+      if (this.waterAmmoCount > 0) {
         this.bullets.push(new Bullet(
           this.canvas,
           this.ctx,
@@ -186,7 +193,7 @@ class Dino {
           Dino.config.BULLET_WIDTH,
           Dino.config.BULLET_HEIGHT
         ));
-        this.bulletsFired++;
+        this.waterAmmoCount--;
       } else {
         // Optional: Show "Out of ammo" floating text
         if (this.runner) {
@@ -223,10 +230,24 @@ class Cloud {
     this.yPos = getRandomNum(Cloud.config.MIN_Y, Cloud.config.MAX_Y);
     this.remove = false;
     this.speed = getRandomNum(Cloud.config.MIN_SPEED, Cloud.config.MAX_SPEED) / 2;
+    this.isTouched = false;
   }
 
   draw() {
     this.ctx.save();
+    
+    // Draw highlight if cloud is highlighted
+    if (this.isTouched) {
+      this.ctx.globalAlpha = 0.1;
+      this.ctx.fillStyle = colors.BLUE;
+      this.ctx.fillRect(
+        this.xPos,
+        this.yPos,
+        Cloud.config.WIDTH,
+        Cloud.config.HEIGHT
+      );
+    }
+    
     this.ctx.drawImage(
         this.spriteSheet,
         Cloud.config.SPRITE_X,
@@ -448,6 +469,17 @@ class Horizon {
     
     this.dino.bullets = this.dino.bullets.filter(bullet => !bullet.remove);
     this.obstacles = this.obstacles.filter(obstacle => !obstacle.remove);
+
+    // Add cloud collision detection
+    this.clouds.forEach(cloud => {
+      if (!cloud.isTouched && this.isCollidingWithDino(cloud)) {
+        cloud.isTouched = true;
+        const text = '+2'
+        const waterText = new FloatingText(cloud.xPos, cloud.yPos, text, colors.BLUE);
+        this.runner.floatingTexts.push(waterText);
+        this.dino.waterAmmoCount = Math.min(this.dino.waterAmmoCount + 2, this.dino.maxWaterAmmo);
+      }
+    });
   }
 
   isColliding(bullet, obstacle) {
@@ -455,6 +487,13 @@ class Horizon {
            bullet.x + bullet.width > obstacle.xPos &&
            bullet.y < obstacle.yPos + obstacle.height &&
            bullet.y + bullet.height > obstacle.yPos;
+  }
+
+  isCollidingWithDino(cloud) {
+    return this.dino.xPos < cloud.xPos + Cloud.config.WIDTH &&
+           this.dino.xPos + Dino.config.WIDTH > cloud.xPos &&
+           this.dino.yPos < cloud.yPos + Cloud.config.HEIGHT &&
+           this.dino.yPos + Dino.config.HEIGHT > cloud.yPos;
   }
 
   update() {
