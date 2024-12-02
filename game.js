@@ -1,3 +1,9 @@
+
+// Utilities
+function getRandomNum(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 class Runner {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -47,9 +53,7 @@ class Cloud {
     
   }
 
-  getRandomNum(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+
 
   draw() {
     this.ctx.save();
@@ -83,13 +87,44 @@ class Cloud {
   }
 }
 
+class HorizonLine {
+    static config = {
+        SPRITE_X: 2,
+        SPRITE_Y: 54,
+        WIDTH: 600,
+        HEIGHT: 12
+    }
+    constructor(canvas, ctx, spriteSheet) {
+        this.canvas = canvas;
+        this.ctx = ctx;
+        this.spriteSheet = spriteSheet;
+        this.yPos = canvas.height - 24
+    }
+
+    draw() {
+     this.ctx.save();
+     this.ctx.drawImage(
+        this.spriteSheet,
+        HorizonLine.config.SPRITE_X,
+        HorizonLine.config.SPRITE_Y,
+        HorizonLine.config.WIDTH,
+        HorizonLine.config.HEIGHT,
+        0,
+        this.yPos,
+        HorizonLine.config.WIDTH,
+        HorizonLine.config.HEIGHT
+     )
+     this.ctx.restore();
+    }
+}
+
 class Horizon {
   constructor(canvas, ctx, spriteSheet) {
     this.canvas = canvas;
     this.ctx = ctx;
     this.spriteSheet = spriteSheet;
     this.clouds = [];
-    
+    this.horizonLine = new HorizonLine(this.canvas, this.ctx, this.spriteSheet);
   }
 
   addCloud() {
@@ -104,6 +139,7 @@ class Horizon {
     this.clouds.forEach(cloud => {
       cloud.draw();
     });
+    this.horizonLine.draw();
   }
 }
 
