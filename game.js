@@ -7,6 +7,9 @@ const colors = {
   BLUE: "#3498db",
   GREEN: "#2ecc71",
   RED: "#e74c3c",
+  GOLD: "#FFD700",
+  ORANGE: "#e67e22",
+  PURPLE: "#9b59b6",
 };
 
 class Runner {
@@ -95,6 +98,14 @@ class Runner {
     this.ctx.font = '12px "Press Start 2P", monospace';
     this.ctx.fillText(this.dino.leafCount, startX + 25, leafCountY);
 
+    // Dollar counter
+    this.ctx.fillStyle = colors.GOLD;
+    this.ctx.font = '16px "Press Start 2P", monospace';
+    this.ctx.fillText("💰", startX, startY + 65);
+
+    this.ctx.font = '12px "Press Start 2P", monospace';
+    this.ctx.fillText(this.dino.dollarCount, startX + 25, startY + 65);
+
     this.ctx.restore();
   }
 }
@@ -135,6 +146,7 @@ class Dino {
     this.waterAmmoCount = this.maxWaterAmmo;
     this.gasCount = this.maxGasCount;
     this.leafCount = 0;
+    this.dollarCount = 0;
 
     document.addEventListener("keydown", (e) => {
       if (e.code === "Space" && !this.isJumping) {
@@ -510,9 +522,19 @@ class Horizon {
           obstacle.isHit = true;
           const text = "+2";
           this.dino.runner.floatingTexts.push(
-            new FloatingText(obstacle.xPos, obstacle.yPos, text, "#2ecc71", 2)
+            new FloatingText(
+              obstacle.xPos,
+              obstacle.yPos,
+              text,
+              bullet.type === "fire" ? colors.GOLD : colors.GREEN,
+              2
+            )
           );
-          this.dino.leafCount += Dino.config.BASE_LEAF_REWARD;
+          if (bullet.type === "fire") {
+            this.dino.dollarCount += Dino.config.BASE_$_REWARD;
+          } else {
+            this.dino.leafCount += Dino.config.BASE_LEAF_REWARD;
+          }
         }
       });
     });
