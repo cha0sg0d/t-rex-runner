@@ -21,11 +21,14 @@ class Runner {
     this.horizon = new Horizon(this.canvas, this.ctx, this.spriteSheet);
     this.horizon.addCloud();
 
+    this.dino = new Dino(this.canvas, this.ctx, this.spriteSheet);
+
     this.gameLoop();
   }
 
   update() {
     this.horizon.update();
+    this.dino.update();
   }
 
   gameLoop() {
@@ -33,6 +36,44 @@ class Runner {
     requestAnimationFrame(() => this.gameLoop());
   }
 }
+
+class Dino {
+    static config = {
+      WIDTH: 44,
+      HEIGHT: 47,
+      SPRITE_X: 848,
+      SPRITE_Y: 2,
+      GROUND_OFFSET: 12  // Distance from bottom of canvas
+    };
+  
+    constructor(canvas, ctx, spriteSheet) {
+      this.canvas = canvas;
+      this.ctx = ctx;
+      this.spriteSheet = spriteSheet;
+      this.xPos = 0;
+      this.yPos = canvas.height - Dino.config.HEIGHT - Dino.config.GROUND_OFFSET;
+    }
+  
+    draw() {
+      this.ctx.save();
+      this.ctx.drawImage(
+        this.spriteSheet,
+        Dino.config.SPRITE_X,
+        Dino.config.SPRITE_Y,
+        Dino.config.WIDTH,
+        Dino.config.HEIGHT,
+        this.xPos,
+        this.yPos,
+        Dino.config.WIDTH,
+        Dino.config.HEIGHT
+      );
+      this.ctx.restore();
+    }
+  
+    update() {
+      this.draw();
+    }
+  }
 
 class Cloud {
   static config = {
