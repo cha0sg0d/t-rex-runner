@@ -25,16 +25,46 @@ class Runner {
     this.horizon.dino = this.dino;
 
     this.gameLoop();
+    this.drawInfo();
   }
 
   update() {
     this.horizon.update();
     this.dino.update();
+    this.drawInfo();
   }
 
   gameLoop() {
     this.update();
     requestAnimationFrame(() => this.gameLoop());
+  }
+
+  drawInfo() {
+    const startX = this.canvas.width - 120;  // Start position from right side
+    const startY = 30;
+    const leafCountY = startY + 20;
+
+    this.ctx.save();
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+
+    // Water ammo counter
+    this.ctx.fillStyle = '#3498db';
+    this.ctx.font = '16px "Press Start 2P", monospace';
+    this.ctx.fillText('💧', startX, startY);
+    
+    this.ctx.font = '12px "Press Start 2P", monospace';
+    this.ctx.fillText(`${this.dino.maxWaterAmmo - this.dino.bulletsFired} / ${this.dino.maxWaterAmmo}`, startX + 25, startY);
+
+    // Leaf counter
+    this.ctx.fillStyle = '#2ecc71';
+    this.ctx.font = '16px "Press Start 2P", monospace';
+    this.ctx.fillText('🍃', startX, leafCountY);
+    
+    this.ctx.font = '12px "Press Start 2P", monospace';
+    this.ctx.fillText(this.dino.leafCount, startX + 25, leafCountY);
+
+    this.ctx.restore();
   }
 }
 
@@ -53,7 +83,8 @@ class Dino {
       GRAVITY: 0.6,
       BULLET_SPEED: 7,
       BULLET_WIDTH: 13,
-      BULLET_HEIGHT: 7 
+      BULLET_HEIGHT: 7,
+      BASE_LEAF_REWARD: 2
     };
   
     constructor(canvas, ctx, spriteSheet) {
@@ -67,7 +98,10 @@ class Dino {
       this.velocityY = 0;
       this.isJumping = false;
       this.bullets = [];
-      
+      this.bulletsFired = 0;
+      this.maxWaterAmmo = 10;
+      this.leafCount = 0;
+
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && !this.isJumping) {
           this.jump();
@@ -143,6 +177,7 @@ class Dino {
         Dino.config.BULLET_WIDTH,
         Dino.config.BULLET_HEIGHT
       ));
+      this.bulletsFired++;
     }
   }
 
@@ -328,10 +363,11 @@ class Obstacle {
   }
 
 class FloatingText {
-  constructor(x, y, text) {
+  constructor(x, y, text, color) {
     this.x = x;
     this.y = y;
     this.text = text;
+    this.color = color;
     this.lifetime = 30;
     this.remove = false;
   }
@@ -347,7 +383,7 @@ class FloatingText {
 
   draw(ctx) {
     ctx.save();
-    ctx.fillStyle = '#3498db';
+    ctx.fillStyle = this.color;
     ctx.font = '16px "Press Start 2P", monospace';
     ctx.fillText(this.text, this.x, this.y);
     ctx.restore();
@@ -381,8 +417,9 @@ class Horizon {
         if (this.isColliding(bullet, obstacle)) {
           bullet.remove = true;
           obstacle.remove = true;
-          const text = '+2 🍃'
-          this.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text));
+          const text = '+2'
+          this.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text, '#2ecc71'));
+          this.dino.leafCount += Dino.config.BASE_LEAF_REWARD;
         }
       });
     });
