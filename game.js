@@ -327,6 +327,33 @@ class Obstacle {
     }
   }
 
+class FloatingText {
+  constructor(x, y, text) {
+    this.x = x;
+    this.y = y;
+    this.text = text;
+    this.lifetime = 30;
+    this.remove = false;
+  }
+
+  update(speed) {
+    this.x -= speed;
+    this.y -= 1;
+    this.lifetime--;
+    if (this.lifetime <= 0) {
+      this.remove = true;
+    }
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.fillStyle = '#3498db';
+    ctx.font = '16px "Press Start 2P", monospace';
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.restore();
+  }
+}
+
 class Horizon {
   constructor(canvas, ctx, spriteSheet) {
     this.canvas = canvas;
@@ -337,6 +364,7 @@ class Horizon {
     this.cloudSpawnTimer = 0;
     this.obstacles = [];
     this.obstacleSpawnTimer = 0;
+    this.floatingTexts = [];
   }
 
   addCloud() {
@@ -353,13 +381,16 @@ class Horizon {
         if (this.isColliding(bullet, obstacle)) {
           bullet.remove = true;
           obstacle.remove = true;
+          const text = '+2 🍃'
+          this.floatingTexts.push(new FloatingText(obstacle.xPos, obstacle.yPos, text));
         }
       });
     });
     
-    // Clean up removed bullets and obstacles
+    // Clean up removed bullets, obstacles, and texts
     this.dino.bullets = this.dino.bullets.filter(bullet => !bullet.remove);
     this.obstacles = this.obstacles.filter(obstacle => !obstacle.remove);
+    this.floatingTexts = this.floatingTexts.filter(text => !text.remove);
   }
 
   isColliding(bullet, obstacle) {
@@ -397,6 +428,8 @@ class Horizon {
     this.clouds.forEach(cloud => cloud.update());
     this.obstacles.forEach(obstacle => obstacle.update());
     
+    this.floatingTexts.forEach(text => text.update(speed));
+    
     this.draw();
   }
 
@@ -404,6 +437,7 @@ class Horizon {
     this.clouds.forEach(cloud => cloud.draw());
     this.obstacles.forEach(obstacle => obstacle.draw());
     this.horizonLine.draw();
+    this.floatingTexts.forEach(text => text.draw(this.ctx));
   }
 }
 
@@ -426,7 +460,7 @@ class Bullet {
   }
 
   draw(ctx) {
-    ctx.fillStyle = '#00f';
+    ctx.fillStyle = '#3498db';
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 }
