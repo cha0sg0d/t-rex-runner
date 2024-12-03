@@ -55,6 +55,9 @@ class Runner {
         }
       }
     });
+
+    this.distance = 0; // Add distance counter
+    this.distanceUnit = "m"; // Add unit for display
   }
 
   update() {
@@ -68,6 +71,9 @@ class Runner {
     this.drawInfo();
 
     this.floatingTexts.forEach((text) => text.draw(this.ctx));
+
+    // Update distance when game is running
+    this.distance += this.speed / 10; // Adjust divisor to control distance increment rate
   }
 
   gameLoop() {
@@ -126,6 +132,16 @@ class Runner {
 
     this.ctx.font = '12px "Press Start 2P", monospace';
     this.ctx.fillText(this.dino.dollarCount, currentX + 25, startY);
+
+    // Add distance counter (after other counters)
+    currentX += spacing;
+    this.ctx.fillStyle = colors.PURPLE;
+    this.ctx.font = '12px "Press Start 2P", monospace';
+    this.ctx.fillText(
+      `${Math.floor(this.distance)}${this.distanceUnit}`,
+      currentX + 120,
+      startY
+    );
 
     this.ctx.restore();
   }
