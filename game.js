@@ -32,7 +32,7 @@ class Runner {
     this.floatingTexts = [];
     this.horizon = new Horizon(this.canvas, this.ctx, this.spriteSheet);
 
-    this.speed = 2;
+    this.speed = 3;
     this.dino = new Dino(this.canvas, this.ctx, this.spriteSheet);
     this.dino.runner = this;
     this.horizon.dino = this.dino;
@@ -600,29 +600,33 @@ class Horizon {
     // Remove obstacles that are marked for removal
     this.obstacles = this.obstacles.filter((obstacle) => !obstacle.remove);
 
-    this.obstacleSpawnTimer++;
-    if (this.obstacleSpawnTimer > getRandomNum(150, 300)) {
+    // Check if we've hit a 200m milestone
+    const distance = Math.floor(this.runner.distance);
+    const prevDistance = Math.floor(
+      this.runner.distance - this.runner.speed / 10
+    );
+    if (distance > 0 && distance % 200 === 0 && prevDistance % 200 !== 0) {
       this.obstacles.push(
         new Obstacle(this.canvas, this.ctx, this.spriteSheet, "STORE")
       );
-      // const roll = Math.random();
-      // if (roll < 0.6) {
-      //   this.obstacles.push(
-      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS")
-      //   ); // 60% chance for cactus
-      // } else if (roll < 0.8) {
-      //   this.obstacles.push(
-      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
-      //   ); // 20% chance for cloud
-      // } else if (roll < 0.9) {
-      //   this.obstacles.push(
-      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "STORE")
-      //   ); // 10% chance for store
-      // } else {
-      //   this.obstacles.push(
-      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
-      //   ); // 10% chance for gas
-      // }
+    }
+
+    this.obstacleSpawnTimer++;
+    if (this.obstacleSpawnTimer > getRandomNum(150, 300)) {
+      const roll = Math.random();
+      if (roll < 0.6) {
+        this.obstacles.push(
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS")
+        ); // 60% chance for cactus
+      } else if (roll < 0.8) {
+        this.obstacles.push(
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
+        ); // 20% chance for cloud
+      } else {
+        this.obstacles.push(
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
+        ); // 20% chance for gas
+      }
       this.obstacleSpawnTimer = 0;
     }
 
