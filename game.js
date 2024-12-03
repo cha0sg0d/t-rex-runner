@@ -342,19 +342,16 @@ class Obstacle {
   };
 
   constructor(canvas, ctx, spriteSheet, type) {
+    const isCactus = type.includes("CACTUS");
     this.canvas = canvas;
     this.ctx = ctx;
     this.spriteSheet = spriteSheet;
-    this.size = 1;
+    this.size = isCactus ? this.getCactusSize() : 1;
     this.type = type;
-    this.item = Obstacle.config[type];
+    this.item = isCactus
+      ? Obstacle.config[this.getCactusType()]
+      : Obstacle.config[type];
     console.log(`SPAWNING ${type}`, this.item);
-
-    // // Randomly choose between small and large cactus
-    // this.type =
-    //   Math.random() > 0.5
-    //     ? Obstacle.config.CACTUS_SMALL
-    //     : Obstacle.config.CACTUS_LARGE;
 
     this.width = this.item.WIDTH * this.size;
     this.height = this.item.HEIGHT;
@@ -370,6 +367,13 @@ class Obstacle {
         Obstacle.config.CLOUD.MAX_Y
       );
     }
+  }
+
+  getCactusSize() {
+    return getRandomNum(1, Obstacle.config.MAX_OBSTACLE_LENGTH);
+  }
+  getCactusType() {
+    return Math.random() > 0.5 ? "CACTUS_SMALL" : "CACTUS_LARGE";
   }
 
   draw() {
@@ -557,7 +561,7 @@ class Horizon {
       const roll = Math.random();
       if (roll < 0.6) {
         this.obstacles.push(
-          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS_SMALL")
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS")
         ); // 60% chance for cactus
       } else if (roll < 0.8) {
         this.obstacles.push(
