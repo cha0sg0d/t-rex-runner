@@ -38,9 +38,19 @@ class Runner {
 
     this.gameLoop();
     this.drawInfo();
+    this.isPaused = false;
+
+    // Add pause key listener
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "KeyP") {
+        this.isPaused = !this.isPaused;
+      }
+    });
   }
 
   update() {
+    if (this.isPaused) return;
+
     this.floatingTexts = this.floatingTexts.filter((text) => !text.remove);
     this.floatingTexts.forEach((text) => text.update());
 
@@ -501,7 +511,9 @@ class Horizon {
       if (!obstacle.isHit && isColliding) {
         obstacle.isHit = true;
         console.log("COLLISION", obstacle.type);
-        if (obstacle.type === "CLOUD") {
+        if (obstacle.type === "STORE") {
+          this.runner.isPaused = true;
+        } else if (obstacle.type === "CLOUD") {
           const text = "+2";
           const waterText = new FloatingText(
             obstacle.xPos,
