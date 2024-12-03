@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
   <head>
@@ -13,21 +12,13 @@
     <div class="game-container">
       <div class="canvas-wrapper" style="position: relative">
         <canvas id="gameCanvas"></canvas>
-        <div id="stats-container"></div>
-        <!-- <button id="debug-combat" class="debug-btn">Debug Combat</button>
-        <button id="debug-toggle" class="debug-toggle">Debug: OFF</button> -->
-      </div>
-
-      <!-- Item Dialog (now used for both items and combat) -->
-      <!-- <div class="item-dialog" style="display: none">
-        <div class="dialog-content">
-          <p class="dialog-text"></p>
-          <div class="dialog-options">
-            <div class="dialog-buttons-container"></div>
-          </div>
+        <div id="pause-modal" class="pause-modal" style="display: none">
+          <div class="pause-content"></div>
         </div>
-      </div> -->
+        <div id="stats-container"></div>
+      </div>
     </div>
     <script src="game.js" type="module"></script>
   </body>
 </html>
+

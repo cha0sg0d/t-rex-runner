@@ -1,0 +1,2 @@
+- [ ] Make the game speed and up and ensure no collisions + correct gap between obstacles
+- [ ] Add a checkpoint obstacle that pauses the game and opens a modal where the player can shop

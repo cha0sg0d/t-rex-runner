@@ -1,3 +1,5 @@
+import { ModalManager } from "./modal.js";
+
 // Utilities
 function getRandomNum(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -40,10 +42,17 @@ class Runner {
     this.drawInfo();
     this.isPaused = false;
 
-    // Add pause key listener
+    this.modalManager = new ModalManager();
+
+    // Update pause key listener
     document.addEventListener("keydown", (e) => {
       if (e.code === "KeyP") {
         this.isPaused = !this.isPaused;
+        if (this.isPaused) {
+          this.modalManager.show("pause");
+        } else {
+          this.modalManager.hide();
+        }
       }
     });
   }
@@ -513,6 +522,7 @@ class Horizon {
         console.log("COLLISION", obstacle.type);
         if (obstacle.type === "STORE") {
           this.runner.isPaused = true;
+          this.runner.modalManager.show("store");
         } else if (obstacle.type === "CLOUD") {
           const text = "+2";
           const waterText = new FloatingText(
