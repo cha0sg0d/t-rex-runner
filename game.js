@@ -336,6 +336,12 @@ class Obstacle {
       SPRITE_X: 1233,
       SPRITE_Y: 11,
     },
+    STORE: {
+      WIDTH: 47,
+      HEIGHT: 27,
+      SPRITE_X: 1233,
+      SPRITE_Y: 37,
+    },
     MAX_OBSTACLE_LENGTH: 3,
     MIN_SPEED: 2,
     SPEED_OFFSET: 0.8,
@@ -558,20 +564,27 @@ class Horizon {
 
     this.obstacleSpawnTimer++;
     if (this.obstacleSpawnTimer > getRandomNum(150, 300)) {
-      const roll = Math.random();
-      if (roll < 0.6) {
-        this.obstacles.push(
-          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS")
-        ); // 60% chance for cactus
-      } else if (roll < 0.8) {
-        this.obstacles.push(
-          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
-        ); // 20% chance for cloud
-      } else {
-        this.obstacles.push(
-          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
-        ); // 20% chance for gas
-      }
+      this.obstacles.push(
+        new Obstacle(this.canvas, this.ctx, this.spriteSheet, "STORE")
+      );
+      // const roll = Math.random();
+      // if (roll < 0.6) {
+      //   this.obstacles.push(
+      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS")
+      //   ); // 60% chance for cactus
+      // } else if (roll < 0.8) {
+      //   this.obstacles.push(
+      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
+      //   ); // 20% chance for cloud
+      // } else if (roll < 0.9) {
+      //   this.obstacles.push(
+      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "STORE")
+      //   ); // 10% chance for store
+      // } else {
+      //   this.obstacles.push(
+      //     new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
+      //   ); // 10% chance for gas
+      // }
       this.obstacleSpawnTimer = 0;
     }
 
