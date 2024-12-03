@@ -29,7 +29,6 @@ class Runner {
 
     this.floatingTexts = [];
     this.horizon = new Horizon(this.canvas, this.ctx, this.spriteSheet);
-    this.horizon.addCloud();
 
     this.speed = 2;
     this.dino = new Dino(this.canvas, this.ctx, this.spriteSheet);
@@ -58,9 +57,9 @@ class Runner {
   }
 
   drawInfo() {
-    const startX = this.canvas.width - 120; // Start position from right side
     const startY = 20;
-    const leafCountY = startY + 20;
+    const spacing = 120; // Space between each counter
+    let currentX = 10; // Start from left side
 
     this.ctx.save();
     this.ctx.textAlign = "left";
@@ -69,42 +68,45 @@ class Runner {
     // Water ammo counter
     this.ctx.fillStyle = "#3498db";
     this.ctx.font = '16px "Press Start 2P", monospace';
-    this.ctx.fillText("💧", startX, startY);
+    this.ctx.fillText("💧", currentX, startY);
 
     this.ctx.font = '12px "Press Start 2P", monospace';
     this.ctx.fillText(
       `${this.dino.waterAmmoCount} / ${this.dino.maxWaterAmmo}`,
-      startX + 25,
+      currentX + 25,
       startY
     );
 
     // Gas counter
+    currentX += spacing;
     this.ctx.fillStyle = colors.RED;
     this.ctx.font = '16px "Press Start 2P", monospace';
-    this.ctx.fillText("⛽️", startX, startY + 40);
+    this.ctx.fillText("⛽️", currentX, startY);
 
     this.ctx.font = '12px "Press Start 2P", monospace';
     this.ctx.fillText(
       `${this.dino.gasCount} / ${this.dino.maxGasCount}`,
-      startX + 25,
-      startY + 40
+      currentX + 25,
+      startY
     );
 
     // Leaf counter
+    currentX += spacing;
     this.ctx.fillStyle = "#2ecc71";
     this.ctx.font = '16px "Press Start 2P", monospace';
-    this.ctx.fillText("🍃", startX, leafCountY);
+    this.ctx.fillText("🍃", currentX, startY);
 
     this.ctx.font = '12px "Press Start 2P", monospace';
-    this.ctx.fillText(this.dino.leafCount, startX + 25, leafCountY);
+    this.ctx.fillText(this.dino.leafCount, currentX + 25, startY);
 
     // Dollar counter
+    currentX += 55;
     this.ctx.fillStyle = colors.GOLD;
     this.ctx.font = '16px "Press Start 2P", monospace';
-    this.ctx.fillText("💰", startX, startY + 65);
+    this.ctx.fillText("💰", currentX, startY);
 
     this.ctx.font = '12px "Press Start 2P", monospace';
-    this.ctx.fillText(this.dino.dollarCount, startX + 25, startY + 65);
+    this.ctx.fillText(this.dino.dollarCount, currentX + 25, startY);
 
     this.ctx.restore();
   }
@@ -445,31 +447,11 @@ class Horizon {
     this.canvas = canvas;
     this.ctx = ctx;
     this.spriteSheet = spriteSheet;
-    this.clouds = [];
     this.horizonLine = new HorizonLine(this.canvas, this.ctx, this.spriteSheet);
     this.cloudSpawnTimer = 0;
     this.obstacles = [];
     this.obstacleSpawnTimer = 0;
-    this.gases = [];
     this.gasSpawnTimer = 0;
-  }
-
-  addCloud() {
-    this.obstacles.push(
-      new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
-    );
-  }
-
-  addObstacle() {
-    this.obstacles.push(
-      new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS_SMALL")
-    );
-  }
-
-  addGas() {
-    this.obstacles.push(
-      new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
-    );
   }
 
   checkCollisions() {
@@ -567,42 +549,34 @@ class Horizon {
     this.horizonLine.update(speed);
     this.checkCollisions();
 
-    // Remove clouds and obstacles that are marked for removal
-    this.clouds = this.clouds.filter((cloud) => !cloud.remove);
+    // Remove obstacles that are marked for removal
     this.obstacles = this.obstacles.filter((obstacle) => !obstacle.remove);
 
-    // Randomly spawn new clouds
-    this.cloudSpawnTimer++;
-    if (this.cloudSpawnTimer > getRandomNum(150, 300)) {
-      this.addCloud();
-      this.cloudSpawnTimer = 0;
-    }
-
-    // Randomly spawn new obstacles
     this.obstacleSpawnTimer++;
     if (this.obstacleSpawnTimer > getRandomNum(150, 300)) {
-      this.addObstacle();
+      const roll = Math.random();
+      if (roll < 0.6) {
+        this.obstacles.push(
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CACTUS_SMALL")
+        ); // 60% chance for cactus
+      } else if (roll < 0.8) {
+        this.obstacles.push(
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "CLOUD")
+        ); // 20% chance for cloud
+      } else {
+        this.obstacles.push(
+          new Obstacle(this.canvas, this.ctx, this.spriteSheet, "GAS")
+        ); // 20% chance for gas
+      }
       this.obstacleSpawnTimer = 0;
     }
 
-    // Manage gas clouds
-    this.gases = this.gases.filter((gas) => !gas.remove);
-    this.gasSpawnTimer++;
-    if (this.gasSpawnTimer > getRandomNum(100, 200)) {
-      this.addGas();
-      this.gasSpawnTimer = 0;
-    }
-
-    this.clouds.forEach((cloud) => cloud.update());
     this.obstacles.forEach((obstacle) => obstacle.update());
-    this.gases.forEach((gas) => gas.update());
 
     this.draw();
   }
 
   draw() {
-    this.clouds.forEach((cloud) => cloud.draw());
-    this.gases.forEach((gas) => gas.draw()); // Draw gases before obstacles
     this.obstacles.forEach((obstacle) => obstacle.draw());
     this.horizonLine.draw();
   }
